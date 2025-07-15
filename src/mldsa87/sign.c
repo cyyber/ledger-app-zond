@@ -85,6 +85,7 @@ static void combined_method(volatile PolyVecK *t1, PolyVecL *s1hat, uint8_t rho[
                     int64_t a = ((int64_t)(poly_buffer[k]) * (int64_t)(s1hat->vec[j].coeffs[k]));
                     t2 = (int32_t) ((int64_t)(int32_t)a * Q_INV);
                     t2 = (int32_t) ((a - (int64_t)t2*Q_CONST) >> 32);
+					// temp_poly.coeffs[k] = t2;
 					nvm_write((void*)&t1->vec[i].coeffs[k], &t2, sizeof(int32_t));
                 }
 
@@ -98,6 +99,7 @@ static void combined_method(volatile PolyVecK *t1, PolyVecL *s1hat, uint8_t rho[
                 }
                 for(int k = 0; k < N; k++) {
 					temp = t1->vec[i].coeffs[k] + t_poly.coeffs[k];
+					// temp_poly.coeffs[k] = temp_poly.coeffs[k] + t_poly.coeffs[k];
 					nvm_write((void*)&t1->vec[i].coeffs[k], &temp, sizeof(int32_t));
                 }
             }
@@ -110,17 +112,22 @@ typedef union {
 	PolyVecK t0;
 } union_s1hat_t0;
 
+Poly temp_poly;
+
 static void poly_vec_k_reduce_volatile(volatile PolyVecK *v) {
     for(int i = 0; i < K; ++i) {
+		memmove(&temp_poly, &v->vec[i], sizeof(Poly));
 		for(int j = 0; j < N; ++j) {
 			int32_t t = 0;
 			int32_t a =  v->vec[i].coeffs[j];
 
 			t = (a + (1 << 22)) >> 23;
 			t = a - t*Q_CONST;
+			temp_poly.coeffs[j] = t;
 
-			nvm_write((void*)&v->vec[i].coeffs[j], &t, sizeof(int32_t));
+			// nvm_write((void*)&v->vec[i].coeffs[j], &t, sizeof(int32_t));
 		}
+		nvm_write((void*)&v->vec[i], (void *)&temp_poly, sizeof(Poly));
 	}
 }
 
@@ -166,59 +173,73 @@ static void poly_vec_k_inv_ntt_to_mont_volatile(volatile PolyVecK *v) {
 }
 
 static void poly_vec_k_add_volatile(volatile PolyVecK *w, volatile PolyVecK *u, PolyVecK *v) {
-	int32_t temp = 0;
+	// int32_t temp = 0;
     for(int i = 0; i < K; ++i) {
+		memmove(&temp_poly, &w->vec[i], sizeof(Poly));
 		for(int j = 0; j < N; ++j) {
-			temp = u->vec[i].coeffs[j] + v->vec[i].coeffs[j];
-			nvm_write((void*)&w->vec[i].coeffs[j], (void *)&temp, sizeof(int32_t));
+			temp_poly.coeffs[j] = temp_poly.coeffs[j] + v->vec[i].coeffs[j];
+			// nvm_write((void*)&w->vec[i].coeffs[j], (void *)&temp, sizeof(int32_t));
 		}
+		nvm_write((void*)&w->vec[i], &temp_poly, sizeof(Poly));
 	}
 }
 
 static void poly_vec_k_c_addq_volatile(volatile PolyVecK *v) {
     for(int i = 0; i < K; ++i) {
+		memmove(&temp_poly, &v->vec[i], sizeof(Poly));
 		for(int j = 0; j < N; ++j) {
-			int32_t a = v->vec[i].coeffs[j];
+			int32_t a = temp_poly.coeffs[j];
 			a += (a >> 31) & Q_CONST;
-			nvm_write((void*)&v->vec[i].coeffs[j], &a, sizeof(int32_t));
+			temp_poly.coeffs[j] = a;
+			// nvm_write((void*)&v->vec[i].coeffs[j], &a, sizeof(int32_t));
 		}
+		nvm_write((void*)&v->vec[i], &temp_poly, sizeof(Poly));
 	}
 }
 
 static void poly_vec_k_power2_round_volatile(volatile PolyVecK *v1, PolyVecK *v0, volatile PolyVecK *v) {
     for(int i = 0; i < K; ++i) {
+		memmove(&temp_poly, &v1->vec[i], sizeof(Poly));
 		for(int j = 0; j < N; ++j) {
 			int32_t a1 = 0;
 
 			a1 = (v->vec[i].coeffs[j] + (1 << (D - 1)) - 1) >> D;
 			v0->vec[i].coeffs[j] = v->vec[i].coeffs[j] - (a1 << D);
-			nvm_write((void*)&v1->vec[i].coeffs[j], &a1, sizeof(int32_t));
+			temp_poly.coeffs[j] = a1;
+			// nvm_write((void*)&v1->vec[i].coeffs[j], &a1, sizeof(int32_t));
 		}
+		nvm_write((void*)&v1->vec[i], &temp_poly, sizeof(Poly));
 	}
 }
 
 static void pack_pk_volatile(volatile uint8_t (*pkb)[CRYPTO_PUBLIC_KEY_BYTES], uint8_t rho[SEED_BYTES], volatile PolyVecK *t1) {
+	uint8_t temp1[SEED_BYTES] = {0};
 	for(int i = 0; i < SEED_BYTES; ++i) {
-		nvm_write((void*)&N_storage.pk[i], &rho[i], sizeof(uint8_t));
+		temp1[i] = rho[i];
+		// nvm_write((void*)&N_storage.pk[i], &rho[i], sizeof(uint8_t));
 	}
+	nvm_write((void*)&N_storage.pk[0], (void *)&temp1[0], sizeof(uint8_t)*SEED_BYTES);
 	uint8_t tmp = 0;
+	uint8_t temp2[POLY_T1_PACKED_BYTES] = {0};
 	for(int b = 0; b < K; b++) {
+		explicit_bzero(&temp2, sizeof(temp2));
 		for(int i = 0; i < N/4; i++) {
-			tmp = (uint8_t)(t1->vec[b].coeffs[4*i+0] >> 0);
-			nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES + 5*i+0], &tmp, sizeof(uint8_t));
+			temp2[5*i+0] = (uint8_t)(t1->vec[b].coeffs[4*i+0] >> 0);
+			// nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES + 5*i+0], &tmp, sizeof(uint8_t));
 
-			tmp = (uint8_t)((t1->vec[b].coeffs[4*i+0] >> 8) | (t1->vec[b].coeffs[4*i+1] << 2));
-			nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES + 5*i+1], &tmp, sizeof(uint8_t));
+			temp2[5*i+1] = (uint8_t)((t1->vec[b].coeffs[4*i+0] >> 8) | (t1->vec[b].coeffs[4*i+1] << 2));
+			// nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES + 5*i+1], &tmp, sizeof(uint8_t));
 
-			tmp = (uint8_t)((t1->vec[b].coeffs[4*i+1] >> 6) | (t1->vec[b].coeffs[4*i+2] << 4));
-			nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES + 5*i+2], &tmp, sizeof(uint8_t));
+			temp2[5*i+2] = (uint8_t)((t1->vec[b].coeffs[4*i+1] >> 6) | (t1->vec[b].coeffs[4*i+2] << 4));
+			// nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES + 5*i+2], &tmp, sizeof(uint8_t));
 
-			tmp = (uint8_t)((t1->vec[b].coeffs[4*i+2] >> 4) | (t1->vec[b].coeffs[4*i+3] << 6));
-			nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES + 5*i+3], &tmp, sizeof(uint8_t));
+			temp2[5*i+3] = (uint8_t)((t1->vec[b].coeffs[4*i+2] >> 4) | (t1->vec[b].coeffs[4*i+3] << 6));
+			// nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES + 5*i+3], &tmp, sizeof(uint8_t));
 
-			tmp = (uint8_t)((t1->vec[b].coeffs[4*i+3] >> 2));
-			nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES + 5*i+4], &tmp, sizeof(uint8_t));
+			temp2[5*i+4] = (uint8_t)((t1->vec[b].coeffs[4*i+3] >> 2));
+			// nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES + 5*i+4], &tmp, sizeof(uint8_t));
 		}
+		nvm_write((void*)&N_storage.pk[SEED_BYTES + b*POLY_T1_PACKED_BYTES], (void *)&temp2[0], sizeof(uint8_t)*POLY_T1_PACKED_BYTES);
 	}
 }
 
@@ -280,6 +301,7 @@ ErrorCode crypto_sign_keypair(uint8_t (*seed)[SEED_BYTES]) {
 static void poly_vec_l_uniform_gamma1_volatile(volatile PolyVecL *v, uint8_t seed[CRH_BYTES], uint16_t nonce) {
     static uint8_t buf[POLY_UNIFORM_GAMMA1_N_BLOCKS * STREAM_256_BLOCK_BYTES] = {0};
 	for(int j = (uint16_t)0; j < L; j++) {
+		memmove(&temp_poly, &v->vec[j], sizeof(Poly));
 		explicit_bzero(buf, POLY_UNIFORM_GAMMA1_N_BLOCKS * STREAM_256_BLOCK_BYTES);
 		shake256_ctx ctx;
 		shake256_init(&ctx);
@@ -293,37 +315,38 @@ static void poly_vec_l_uniform_gamma1_volatile(volatile PolyVecL *v, uint8_t see
 		int32_t temp = 0;
 		
 		for(int i = 0; i < N/2; i++) {
-			temp = (int32_t)(buf[5*i+0]);
-			nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
+			temp_poly.coeffs[2*i+0] = (int32_t)(buf[5*i+0]);
+			// nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
 
-			temp = v->vec[j].coeffs[2*i+0] | (int32_t)((uint32_t)(buf[5*i+1]) << 8);
-			nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
+			temp_poly.coeffs[2*i+0] = temp_poly.coeffs[2*i+0] | (int32_t)((uint32_t)(buf[5*i+1]) << 8);
+			// nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
 
-			temp = v->vec[j].coeffs[2*i+0] | (int32_t)((uint32_t)(buf[5*i+2]) << 16);
-			nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
+			temp_poly.coeffs[2*i+0] = temp_poly.coeffs[2*i+0] | (int32_t)((uint32_t)(buf[5*i+2]) << 16);
+			// nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
 
-			temp = v->vec[j].coeffs[2*i+0] & 0xFFFFF;
-			nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
+			temp_poly.coeffs[2*i+0] = temp_poly.coeffs[2*i+0] & 0xFFFFF;
+			// nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
 		
 
-			temp = (int32_t)(buf[5*i+2] >> 4);
-			nvm_write((void *)&v->vec[j].coeffs[2*i+1], &temp, sizeof(int32_t));
+			temp_poly.coeffs[2*i+1] = (int32_t)(buf[5*i+2] >> 4);
+			// nvm_write((void *)&v->vec[j].coeffs[2*i+1], &temp, sizeof(int32_t));
 
-			temp = v->vec[j].coeffs[2*i+1] | (int32_t)((uint32_t)(buf[5*i+3]) << 4);
-			nvm_write((void *)&v->vec[j].coeffs[2*i+1], &temp, sizeof(int32_t));
+			temp_poly.coeffs[2*i+1] = temp_poly.coeffs[2*i+1] | (int32_t)((uint32_t)(buf[5*i+3]) << 4);
+			// nvm_write((void *)&v->vec[j].coeffs[2*i+1], &temp, sizeof(int32_t));
 
-			temp = v->vec[j].coeffs[2*i+1] | (int32_t)((uint32_t)(buf[5*i+4]) << 12);
-			nvm_write((void *)&v->vec[j].coeffs[2*i+1], &temp, sizeof(int32_t));
+			temp_poly.coeffs[2*i+1] = temp_poly.coeffs[2*i+1] | (int32_t)((uint32_t)(buf[5*i+4]) << 12);
+			// nvm_write((void *)&v->vec[j].coeffs[2*i+1], &temp, sizeof(int32_t));
 
-			temp = v->vec[j].coeffs[2*i+0] & 0xFFFFF; 
-			nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
+			temp_poly.coeffs[2*i+0] = temp_poly.coeffs[2*i+0] & 0xFFFFF; 
+			// nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
 
-			temp = GAMMA1 - v->vec[j].coeffs[2*i+0];
-			nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
+			temp_poly.coeffs[2*i+0] = GAMMA1 - temp_poly.coeffs[2*i+0];
+			// nvm_write((void *)&v->vec[j].coeffs[2*i+0], &temp, sizeof(int32_t));
 
-			temp = GAMMA1 - v->vec[j].coeffs[2*i+1];
-			nvm_write((void *)&v->vec[j].coeffs[2*i+1], &temp, sizeof(int32_t));
+			temp_poly.coeffs[2*i+1] = GAMMA1 - temp_poly.coeffs[2*i+1];
+			// nvm_write((void *)&v->vec[j].coeffs[2*i+1], &temp, sizeof(int32_t));
 		}
+		nvm_write((void*)&v->vec[j], &temp_poly, sizeof(Poly));
 	}
 }
 
@@ -460,6 +483,7 @@ rej:
 
 static void poly_vec_l_ntt_volatile(volatile PolyVecL *v) {
     for(int i = 0; i < L; i++) {
+		memmove(&temp_poly, &v->vec[i], sizeof(Poly));
 		uint32_t count = 0, start = 0, j = 0, k = 0;
 		int32_t zeta = 0, t = 0;
 
@@ -471,17 +495,18 @@ static void poly_vec_l_ntt_volatile(volatile PolyVecL *v) {
 				zeta = ZETAS[k];
 				for(j = start; j < start+count; j++) {
 					int32_t t1 = 0;
-					int64_t a_reduce = (int64_t)zeta * (int64_t)v->vec[i].coeffs[j+count];
+					int64_t a_reduce = (int64_t)zeta * (int64_t)temp_poly.coeffs[j+count];
 					t1 = (int32_t) ((int64_t)(int32_t)a_reduce * Q_INV);
 					t1 = (int32_t) ((a_reduce - (int64_t)t1*Q_CONST) >> 32);
 					t = t1;
-					temp = v->vec[i].coeffs[j] - t;
-					nvm_write((void *)&v->vec[i].coeffs[j+count], &temp, sizeof(int32_t));
-					temp = v->vec[i].coeffs[j] + t;
-					nvm_write((void *)&v->vec[i].coeffs[j], &temp, sizeof(int32_t));
+					temp_poly.coeffs[j+count] = temp_poly.coeffs[j] - t;
+					// nvm_write((void *)&v->vec[i].coeffs[j+count], &temp, sizeof(int32_t));
+					temp_poly.coeffs[j] = temp_poly.coeffs[j] + t;
+					// nvm_write((void *)&v->vec[i].coeffs[j], &temp, sizeof(int32_t));
 				}
 			}
 		}
+		nvm_write((void*)&v->vec[i], &temp_poly, sizeof(Poly));
 	}
 }
 
@@ -503,24 +528,30 @@ static void poly_vec_k_decompose_volatile(volatile PolyVecK *v1, volatile PolyVe
 }
 
 static void poly_vec_k_pack_w1_volatile(volatile uint8_t *r, volatile PolyVecK *w1) {
-	int32_t temp = 0;
+	// int32_t temp = 0;
+	uint8_t temp_buffer[POLY_W1_PACKED_BYTES] = {0};
 	for(int i = 0; i < K; i++) {
+		explicit_bzero(&temp_buffer, sizeof(temp_buffer));
 		for(int j = 0; j < N/2; j++) {
-			temp = (uint8_t)(w1->vec[i].coeffs[2*j+0] | (w1->vec[i].coeffs[2*j+1] << 4));
-			nvm_write((void *)&r[j + i*POLY_W1_PACKED_BYTES], &temp, sizeof(uint8_t));
+			temp_buffer[j] = (uint8_t)(w1->vec[i].coeffs[2*j+0] | (w1->vec[i].coeffs[2*j+1] << 4));
+			// nvm_write((void *)&r[j + i*POLY_W1_PACKED_BYTES], &temp, sizeof(uint8_t));
 		}
+		nvm_write((void *)&r[i*POLY_W1_PACKED_BYTES], &temp_buffer, sizeof(uint8_t)*POLY_W1_PACKED_BYTES);
 	}
 }
 
 static void poly_vec_l_pointwise_poly_montgomery_volatile(volatile PolyVecL *r, volatile Poly *a, PolyVecL *v) {
     for(int i = 0; i < L; i++) {
+		memmove(&temp_poly, &r->vec[i], sizeof(Poly));
 		for(int j = 0; j < N; j++) {
 			int32_t t = 0;
 			int64_t a_reduce = (int64_t)(a->coeffs[j]) * (int64_t)(v->vec[i].coeffs[j]);
 			t = (int32_t) ((int64_t)(int32_t)a_reduce * Q_INV);
 			t = (int32_t) ((a_reduce - (int64_t)t*Q_CONST) >> 32);
-			nvm_write((void *)&r->vec[i].coeffs[j], &t, sizeof(int32_t));
+			temp_poly.coeffs[j] = t;
+			// nvm_write((void *)&r->vec[i].coeffs[j], &t, sizeof(int32_t));
 		}
+		nvm_write((void*)&r->vec[i], &temp_poly, sizeof(Poly));
 	}
 }
 
@@ -562,34 +593,41 @@ static void poly_vec_l_inv_ntt_to_mont_volatile(volatile PolyVecL *v) {
 }
 
 static void poly_vec_l_add_volatile(volatile PolyVecL *w, volatile PolyVecL *u, volatile PolyVecL *v) {
-	int32_t temp = 0;
+	// int32_t temp = 0;
     for(int i = 0; i < L; i++) {
+		memmove(&temp_poly, &w->vec[i], sizeof(Poly));
 		for(int j = 0; j < N; j++) {
-			temp = u->vec[i].coeffs[j] + v->vec[i].coeffs[j];
-			nvm_write((void *)&w->vec[i].coeffs[j], &temp, sizeof(int32_t));
+			temp_poly.coeffs[j] = temp_poly.coeffs[j] + v->vec[i].coeffs[j];
+			// nvm_write((void *)&w->vec[i].coeffs[j], &temp, sizeof(int32_t));
 		}
+		nvm_write((void*)&w->vec[i], &temp_poly, sizeof(Poly));
 	}
 }
 
 static void poly_vec_l_reduce_volatile(volatile PolyVecL *v) {
     for(int i = 0; i < L; i++) {
+		memmove(&temp_poly, &v->vec[i], sizeof(Poly));
 		for(int j = 0; j < N; j++) {
 			int32_t t = 0;
 
 			t = (v->vec[i].coeffs[j] + (1 << 22)) >> 23;
 			t = v->vec[i].coeffs[j] - t*Q_CONST;
-			nvm_write((void *)&v->vec[i].coeffs[j], &t, sizeof(int32_t));
+			temp_poly.coeffs[j] = t;
+			// nvm_write((void *)&v->vec[i].coeffs[j], &t, sizeof(int32_t));
 		}
+		nvm_write((void*)&v->vec[i], &temp_poly, sizeof(Poly));
 	}
 }
 
 static void poly_vec_k_sub_volatile(volatile PolyVecK *w, volatile PolyVecK *u, PolyVecK *v) {
-	int32_t temp = 0;
+	// int32_t temp = 0;
     for(int i = 0; i < K; i++) {
+		memmove(&temp_poly, &w->vec[i], sizeof(Poly));
 		for(int j = 0; j < N; j++) {
-			temp = u->vec[i].coeffs[j] - v->vec[i].coeffs[j]; 
-			nvm_write((void *)&w->vec[i].coeffs[j], &temp, sizeof(int32_t));
+			temp_poly.coeffs[j] = u->vec[i].coeffs[j] - v->vec[i].coeffs[j]; 
+			// nvm_write((void *)&w->vec[i].coeffs[j], &temp, sizeof(int32_t));
 		}
+		nvm_write((void*)&w->vec[i], &temp_poly, sizeof(Poly));
 	}
 }
 
@@ -597,51 +635,62 @@ static ErrorCode pack_sig_volatile(volatile uint8_t sig[], size_t sigb_len, uint
     if(sigb_len != CRYPTO_BYTES) {
 		return ERR_INVALID_SIGB_LENGTH;
 	}
+	uint8_t temp1[CTILDE_BYTES] = {0};
 	for(int i = 0; i < CTILDE_BYTES; i++) {
-		nvm_write((void *)&sig[i], &c[i], sizeof(uint8_t));
+		temp1[i] = c[i];
+		// nvm_write((void *)&sig[i], &c[i], sizeof(uint8_t));
 	}
+	nvm_write((void *)&sig[0], (void *)&temp1[0], sizeof(uint8_t)*CTILDE_BYTES);
 	
+	uint8_t temp2[POLY_Z_PACKED_BYTES] = {0};
 	int32_t temp = 0;
 	for(int b = 0; b < L; b++) {
+		explicit_bzero(&temp2, sizeof(temp2));
 		uint32_t t[4] = {0};
 
 		for(int i = 0; i < N/2; i++) {
 			t[0] = (uint32_t)(GAMMA1 - z->vec[b].coeffs[2*i+0]);
 			t[1] = (uint32_t)(GAMMA1 - z->vec[b].coeffs[2*i+1]);
 
-			temp = (uint8_t)(t[0]);
-			nvm_write((void *)&sig[5*i+0 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
-			temp = (uint8_t)(t[0] >> 8);
-			nvm_write((void *)&sig[5*i+1 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
-			temp = (uint8_t)(t[0] >> 16);
-			nvm_write((void *)&sig[5*i+2 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
-			temp = sig[5*i+2 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES] | (uint8_t)(t[1] << 4);
-			nvm_write((void *)&sig[5*i+2 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
-			temp = (uint8_t)(t[1] >> 4);
-			nvm_write((void *)&sig[5*i+3 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
-			temp = (uint8_t)(t[1] >> 12);
-			nvm_write((void *)&sig[5*i+4 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
+			temp2[5*i+0] = (uint8_t)(t[0]);
+			// nvm_write((void *)&sig[5*i+0 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
+			temp2[5*i+1] = (uint8_t)(t[0] >> 8);
+			// nvm_write((void *)&sig[5*i+1 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
+			temp2[5*i+2] = (uint8_t)(t[0] >> 16);
+			// nvm_write((void *)&sig[5*i+2 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
+			temp2[5*i+2] = temp2[5*i+2] | (uint8_t)(t[1] << 4);
+			// nvm_write((void *)&sig[5*i+2 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
+			temp2[5*i+3] = (uint8_t)(t[1] >> 4);
+			// nvm_write((void *)&sig[5*i+3 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
+			temp2[5*i+4] = (uint8_t)(t[1] >> 12);
+			// nvm_write((void *)&sig[5*i+4 + CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
 		}
+		nvm_write((void *)&sig[CTILDE_BYTES + b*POLY_Z_PACKED_BYTES], (void *)&temp2[0], sizeof(uint8_t)*POLY_Z_PACKED_BYTES);
 	}
 
 	/* Encode h */
-	temp = 0;
+	// temp = 0;
+	uint8_t temp3[OMEGA+K] = {0};
 	for(int i = 0; i < OMEGA+K; i++) {
-		nvm_write((void *)&sig[i + CTILDE_BYTES + L*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
+		temp3[i] = 0;
+		// nvm_write((void *)&sig[i + CTILDE_BYTES + L*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
 	}
+	nvm_write((void *)&sig[CTILDE_BYTES + L*POLY_Z_PACKED_BYTES], (void *)&temp3[0], sizeof(uint8_t)*(OMEGA+K));
 
+	explicit_bzero(&temp3, sizeof(temp3));
 	int32_t k = 0;
 	for(int i = 0; i < K; i++) {
 		for(int j = 0; j < N; j++) {
 			if(h->vec[i].coeffs[j] != 0) {
-				temp = (uint8_t)j;
-				nvm_write((void *)&sig[k + CTILDE_BYTES + L*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
+				temp3[k] = (uint8_t)j;
+				// nvm_write((void *)&sig[k + CTILDE_BYTES + L*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
 				k++;
 			}
-			temp = (uint8_t)k;
-			nvm_write((void *)&sig[OMEGA + i + CTILDE_BYTES + L*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
+			temp3[OMEGA+i] = (uint8_t)k;
+			// nvm_write((void *)&sig[OMEGA + i + CTILDE_BYTES + L*POLY_Z_PACKED_BYTES], &temp, sizeof(uint8_t));
 		}
 	}
+	nvm_write((void *)&sig[CTILDE_BYTES + L*POLY_Z_PACKED_BYTES], (void *)&temp3[0], sizeof(uint8_t)*(OMEGA+K));
 	return ERR_NONE;
 }
 
@@ -660,13 +709,16 @@ static void shake256_squeeze_volatile(shake256_ctx *ctx, volatile uint8_t *out, 
 
 static void poly_vec_k_pointwise_poly_montgomery_volatile(volatile PolyVecK *r, Poly *a, PolyVecK *v) {
 	for(int i = 0; i < K; i++) {
+		memmove(&temp_poly, &r->vec[i], sizeof(Poly));
 		for(int j = 0; j < N; j++) {
 			int32_t t = 0;
 			int64_t a_reduce = (int64_t)(a->coeffs[j]) * (int64_t)(v->vec[i].coeffs[j]);
 			t = (int32_t) ((int64_t)(int32_t)a_reduce * Q_INV);
 			t = (int32_t) ((a_reduce - (int64_t)t*Q_CONST) >> 32);
-			nvm_write((void *)&r->vec[i].coeffs[j], &t, sizeof(int32_t));
+			temp_poly.coeffs[j] = t;
+			// nvm_write((void *)&r->vec[i].coeffs[j], &t, sizeof(int32_t));
 		}
+		nvm_write((void*)&r->vec[i], &temp_poly, sizeof(Poly));
 	}
 }
 
@@ -790,12 +842,7 @@ ErrorCode crypto_sign_optimized(const uint32_t bip32_path[], size_t bip32_path_l
     for(int i = 0; i < 32; i++) {
         seed[i] = raw_seed[i];
     }
-
-    PRINTF("MLDSA87 SEED: ");
-    for(int i = 0; i < 32; i++) {
-        PRINTF("%02x", seed[i]);
-    }
-    PRINTF("\n");
+	
 	uint8_t rnd[RND_BYTES] = {0};
 	uint8_t pre[CTX_LEN + 2] = {0};
 	pre[0] = 0;
@@ -891,9 +938,7 @@ ErrorCode crypto_sign_optimized(const uint32_t bip32_path[], size_t bip32_path_l
 	poly_vec_l_ntt(&s1);
 	poly_vec_k_ntt(&s2);
 	poly_vec_k_ntt(&u.t0);
-	int cnt = 0;
 rej:
-	PRINTF("%d\n", cnt);
 	/* Sample intermediate vector y */
 	poly_vec_l_uniform_gamma1_volatile(&N_storage.y, rhoPrime, nonce);
 	nonce++;
@@ -930,8 +975,6 @@ rej:
 	poly_vec_l_add_volatile(&N_storage.z, &N_storage.z, &N_storage.y);
 	poly_vec_l_reduce_volatile(&N_storage.z);
 	if(poly_vec_l_chk_norm(&N_storage.z, GAMMA1-BETA) != 0) {
-		PRINTF("check norm z\n");
-		cnt++;
 		goto rej;
 	}
 
@@ -939,12 +982,9 @@ rej:
 	 * do not reveal secret information */
 	poly_vec_k_pointwise_poly_montgomery_volatile(&N_storage.h, &N_storage.cp, &s2);
 	poly_vec_k_inv_ntt_to_mont_volatile(&N_storage.h);
-	
 	poly_vec_k_sub_volatile(&N_storage.w0, &N_storage.w0, &N_storage.h);
 	poly_vec_k_reduce_volatile(&N_storage.w0);
 	if(poly_vec_k_chk_norm(&N_storage.w0, GAMMA2-BETA) != 0) {
-		PRINTF("check norm w0\n");
-		cnt++;
 		goto rej;
 	}
 
@@ -953,15 +993,11 @@ rej:
 	poly_vec_k_inv_ntt_to_mont_volatile(&N_storage.h);
 	poly_vec_k_reduce_volatile(&N_storage.h);
 	if(poly_vec_k_chk_norm(&N_storage.h, GAMMA2) != 0) {
-		PRINTF("check norm h\n");
-		cnt++;
 		goto rej;
 	}
 	poly_vec_k_add_volatile(&N_storage.w0, &N_storage.w0, &N_storage.h);
 	uint32_t n_ret = poly_vec_k_make_hint_volatile(&N_storage.h, &N_storage.w0, &N_storage.w1);
 	if(n_ret > OMEGA) {
-		PRINTF("check make hint\n");
-		cnt++;
 		goto rej;
 	}
 	uint8_t c[CTILDE_BYTES] = {0};

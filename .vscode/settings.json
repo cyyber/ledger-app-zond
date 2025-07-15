@@ -1,6 +1,10 @@
 {
     "files.associations": {
-        "*.h": "c"
+        "*.h": "c",
+        "algorithm": "c",
+        "format": "c",
+        "compare": "c",
+        "cstdint": "c"
     },
     "ledgerDevTools.appSettings": {
         "selectedUseCase": "release",

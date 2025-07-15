@@ -28,6 +28,8 @@
 #include "sw.h"
 #include "menu.h"
 #include "dispatcher.h"
+#include "address.h"
+#include "sign.h"
 
 global_ctx_t G_context;
 const internal_storage_t N_storage_real;

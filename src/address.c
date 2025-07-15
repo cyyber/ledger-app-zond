@@ -70,19 +70,27 @@ cx_err_t address_from_bip32_path(const uint32_t bip32_path[], size_t bip32_path_
 
     new_mldsa87_from_seed(&mldsa87_seed);
 
-    static uint8_t input[(DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES)*2] = {0};
-    explicit_bzero(input, (DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES)*2);
-    input[0 + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES] = 1;
-    input[1 + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES] = 0;
-    input[2 + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES] = 0;
+    // uint8_t input[(DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES)*2] = {0};
+    // explicit_bzero(input, (DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES)*2);
+    uint8_t temp_val = 1;
+    nvm_write((void *)&N_storage.address_hash_input[0 + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES], &temp_val, sizeof(uint8_t));
+    // input[0 + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES] = 1;
+    temp_val = 0;
+    nvm_write((void *)&N_storage.address_hash_input[1 + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES], &temp_val, sizeof(uint8_t));
+    // input[1 + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES] = 0;
+    temp_val = 0;
+    nvm_write((void *)&N_storage.address_hash_input[2 + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES], &temp_val, sizeof(uint8_t));
+    // input[2 + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES] = 0;
     for(int i = 0; i < CRYPTO_PUBLIC_KEY_BYTES; ++i) {
-        input[i + DESCRIPTOR_BYTES + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES] = N_storage.pk[i];
+        temp_val = N_storage.pk[i];
+        nvm_write((void *)&N_storage.address_hash_input[i + DESCRIPTOR_BYTES + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES], &temp_val, sizeof(uint8_t));
+        // input[i + DESCRIPTOR_BYTES + DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES] = N_storage.pk[i];
     }
 
     uint8_t output[32] = {0};
     shake256_ctx ctx;
     shake256_init(&ctx);
-    shake256_absorb(&ctx, input, (DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES) * 2);
+    shake256_absorb(&ctx, &N_storage.address_hash_input, (DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES) * 2);
     shake256_finalize(&ctx);
     shake256_squeeze(&ctx, output, 32);
     shake256_clear(&ctx);
