@@ -4,7 +4,8 @@
         "algorithm": "c",
         "format": "c",
         "compare": "c",
-        "cstdint": "c"
+        "cstdint": "c",
+        "random": "c"
     },
     "ledgerDevTools.appSettings": {
         "selectedUseCase": "release",
