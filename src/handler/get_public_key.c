@@ -32,6 +32,7 @@
 #include "sw.h"
 #include "display.h"
 #include "send_response.h"
+#include "address.h"
 
 int handler_get_public_key(buffer_t *cdata, bool display) {
     explicit_bzero(&G_context, sizeof(G_context));
@@ -43,13 +44,15 @@ int handler_get_public_key(buffer_t *cdata, bool display) {
         return io_send_sw(SW_WRONG_DATA_LENGTH);
     }
 
-    cx_err_t error = bip32_derive_get_pubkey_256(CX_CURVE_256K1,
-                                                 G_context.bip32_path,
-                                                 G_context.bip32_path_len,
-                                                 G_context.pk_info.raw_public_key,
-                                                 G_context.pk_info.chain_code,
-                                                 CX_SHA512);
+    cx_err_t error = address_from_bip32_path(G_context.bip32_path,
+                                                  G_context.bip32_path_len,
+                                                  G_context.address);
 
+    PRINTF("error %d\n", error);
+    for(int i = 0; i < CRYPTO_PUBLIC_KEY_BYTES; i++) {
+        PRINTF("%02x", N_storage.pk[i]);
+    }
+    PRINTF("\n");
     if (error != CX_OK) {
         return io_send_sw(error);
     }

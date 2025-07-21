@@ -27,27 +27,22 @@
 #include "sw.h"
 
 int helper_send_response_pubkey() {
-    uint8_t resp[1 + PUBKEY_LEN + 1 + CHAINCODE_LEN] = {0};
+    uint8_t resp[1 + ADDRESS_SIZE] = {0};
     size_t offset = 0;
 
-    resp[offset++] = PUBKEY_LEN;
-    memmove(resp + offset, G_context.pk_info.raw_public_key, PUBKEY_LEN);
-    offset += PUBKEY_LEN;
-    resp[offset++] = CHAINCODE_LEN;
-    memmove(resp + offset, G_context.pk_info.chain_code, CHAINCODE_LEN);
-    offset += CHAINCODE_LEN;
+    resp[offset++] = 'Z';
+    memmove(resp + offset, G_context.address, ADDRESS_SIZE);
+    offset += ADDRESS_SIZE;
 
     return io_send_response_pointer(resp, offset, SW_OK);
 }
 
 int helper_send_response_sig() {
-    uint8_t resp[1 + MAX_DER_SIG_LEN + 1] = {0};
+    uint8_t resp[2] = {0};
     size_t offset = 0;
 
-    resp[offset++] = G_context.tx_info.signature_len;
-    memmove(resp + offset, G_context.tx_info.signature, G_context.tx_info.signature_len);
-    offset += G_context.tx_info.signature_len;
-    resp[offset++] = (uint8_t) G_context.tx_info.v;
+    resp[offset++] = 1;
+    resp[offset++] = 1;
 
     return io_send_response_pointer(resp, offset, SW_OK);
 }

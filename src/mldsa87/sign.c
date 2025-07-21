@@ -238,6 +238,22 @@ static void poly_vec_k_power2_round_volatile(volatile PolyVecK *v1, PolyVecK *v0
 	PRINTF("poly_vec_k_power2_round_volatile %d\n", counter);
 }
 
+static void poly_vec_k_power2_round_volatile_keypair(volatile PolyVecK *v1, volatile PolyVecK *v) {
+    uint32_t counter = 0;
+	for(int i = 0; i < K; ++i) {
+		memmove(&temp_poly, &v1->vec[i], sizeof(Poly));
+		for(int j = 0; j < N; ++j) {
+			int32_t a1 = 0;
+
+			a1 = (v->vec[i].coeffs[j] + (1 << (D - 1)) - 1) >> D;
+			// v0->vec[i].coeffs[j] = v->vec[i].coeffs[j] - (a1 << D);
+			temp_poly.coeffs[j] = a1;
+		}
+		nvm_write((void*)&v1->vec[i], &temp_poly, sizeof(Poly));counter++;
+	}
+	PRINTF("poly_vec_k_power2_round_volatile %d\n", counter);
+}
+
 static void pack_pk_volatile(volatile uint8_t (*pkb)[CRYPTO_PUBLIC_KEY_BYTES], uint8_t rho[SEED_BYTES], volatile PolyVecK *t1) {
 	uint32_t counter = 0;
 	uint8_t temp1[SEED_BYTES] = {0};
@@ -271,7 +287,7 @@ ErrorCode crypto_sign_keypair(uint8_t (*seed)[SEED_BYTES]) {
 	uint8_t key[SEED_BYTES] = {0}; 
 	uint8_t rhoPrime[CRH_BYTES] = {0};
 
-	union_s1hat_t0 u;
+	// union_s1hat_t0 u;
 	
 	PolyVecL s1; explicit_bzero(&s1, sizeof(s1));
 	PolyVecK s2; explicit_bzero(&s2, sizeof(s2));
@@ -304,17 +320,18 @@ ErrorCode crypto_sign_keypair(uint8_t (*seed)[SEED_BYTES]) {
 		return err;
 	}
 	/* Matrix-vector multiplication */
-	u.s1hat = s1;
-	poly_vec_l_ntt(&u.s1hat);
-	combined_method(&N_storage.t1, &u.s1hat, rho);
+	// u.s1hat = s1;
+	poly_vec_l_ntt(&s1);
+	combined_method(&N_storage.t1, &s1, rho);
 	poly_vec_k_reduce_volatile(&N_storage.t1);
 	poly_vec_k_inv_ntt_to_mont_volatile(&N_storage.t1);
+
 	// /* Add noise vector s2 */
 	poly_vec_k_add_volatile(&N_storage.t1, &N_storage.t1, &s2); //Error here
 	
 	// /* Extract t1 and write public key */
 	poly_vec_k_c_addq_volatile(&N_storage.t1);
-	poly_vec_k_power2_round_volatile(&N_storage.t1, &u.t0, &N_storage.t1);	
+	poly_vec_k_power2_round_volatile_keypair(&N_storage.t1, &N_storage.t1);	
 	pack_pk_volatile(&N_storage.pk, rho, &N_storage.t1);
 
 	return 0;

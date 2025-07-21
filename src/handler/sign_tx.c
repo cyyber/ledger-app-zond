@@ -59,7 +59,7 @@ static int check_and_sign_swap_tx(transaction_t *tx) {
 }
 #endif  // HAVE_SWAP
 
-int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
+int handler_sign_tx(buffer_t *cdata, uint8_t chunk) {
     if (chunk == 0) {  // first APDU, parse BIP32 path
         explicit_bzero(&G_context, sizeof(G_context));
         G_context.req_type = CONFIRM_TRANSACTION;
@@ -89,7 +89,7 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
         }
         G_context.tx_info.raw_tx_len += cdata->size;
 
-        if (more) {
+        if (chunk) {
             // more APDUs with transaction part are expected.
             // Send a SW_OK to signal that we have received the chunk
             return io_send_sw(SW_OK);

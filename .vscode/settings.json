@@ -5,10 +5,14 @@
         "format": "c",
         "compare": "c",
         "cstdint": "c",
-        "random": "c"
+        "random": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c",
+        "span": "c"
     },
     "ledgerDevTools.appSettings": {
-        "selectedUseCase": "release",
+        "selectedUseCase": "debug",
         "selectedDevice": "Nano X",
         "selectedVariant": "BOL",
         "testsList": [

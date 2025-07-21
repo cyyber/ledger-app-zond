@@ -34,7 +34,7 @@
 #include "tx_types.h"
 #include "menu.h"
 
-static char g_address[43];
+static char g_address[1+ADDRESS_SIZE*2+1];
 
 static void review_choice(bool confirm) {
     // Answer, display a status page and go back to main
@@ -53,19 +53,18 @@ int ui_display_address() {
     }
 
     memset(g_address, 0, sizeof(g_address));
-    uint8_t address[ADDRESS_LEN] = {0};
-    if (!address_from_pubkey(G_context.pk_info.raw_public_key, address, sizeof(address))) {
-        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
-    }
+    uint8_t address[ADDRESS_SIZE] = {0};
+    memmove(address, G_context.address, ADDRESS_SIZE);
 
-    if (format_hex(address, sizeof(address), g_address, sizeof(g_address)) == -1) {
+    if (format_hex(address, sizeof(address), g_address + 1, sizeof(g_address)-1) == -1) {
         return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
     }
+    g_address[0] = 'Z';
 
     nbgl_useCaseAddressReview(g_address,
                               NULL,
                               &ICON_APP_BOILERPLATE,
-                              "Verify BOL address",
+                              "Verify Zond address",
                               NULL,
                               review_choice);
     return 0;
