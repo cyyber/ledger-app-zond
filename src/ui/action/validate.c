@@ -24,6 +24,8 @@
 #include "sw.h"
 #include "globals.h"
 #include "send_response.h"
+#include "sign.h"
+#include "keccak256.h"
 
 void validate_pubkey(bool choice) {
     if (choice) {
@@ -37,24 +39,36 @@ static int crypto_sign_message(void) {
     uint32_t info = 0;
     size_t sig_len = sizeof(G_context.tx_info.signature);
 
-    cx_err_t error = bip32_derive_ecdsa_sign_hash_256(CX_CURVE_256K1,
-                                                      G_context.bip32_path,
-                                                      G_context.bip32_path_len,
-                                                      CX_RND_RFC6979 | CX_LAST,
-                                                      CX_SHA256,
-                                                      G_context.tx_info.m_hash,
-                                                      sizeof(G_context.tx_info.m_hash),
-                                                      G_context.tx_info.signature,
-                                                      &sig_len,
-                                                      &info);
-    if (error != CX_OK) {
+    cx_err_t error = 0;
+
+    PRINTF("bip32_path_len %d\n", G_context.bip32_path_len);
+    PRINTF("raw_tx_len %d\n", G_context.tx_info.raw_tx_len);
+    PRINTF("SIGNING START\n");
+    error = crypto_sign_optimized(G_context.bip32_path,
+                                G_context.bip32_path_len,
+                                G_context.tx_info.m_hash, 32);
+    PRINTF("SIGNING END\n");
+    PRINTF("bip32_path_len %d\n", G_context.bip32_path_len);
+    PRINTF("raw_tx_len %d\n", G_context.tx_info.raw_tx_len);
+    PRINTF("VERIFY START\n");
+    bool is_verified = false;
+    error = crypto_verify_optimized(G_context.bip32_path,
+                                G_context.bip32_path_len, N_storage.sig, CRYPTO_BYTES,
+                                G_context.tx_info.m_hash, 32, &is_verified);
+    PRINTF("VERIFY END\n");
+    if(is_verified) {
+        PRINTF("SIGNATURE CORRECT\n");
+    } else {
+        PRINTF("SIGNATURE WRONG\n");
+    }
+    // for(int i = 0; i < CRYPTO_BYTES; i++) {
+    //     PRINTF("%02x", N_storage.sig[i]);
+    // }
+    // PRINTF("\n");
+                                                      
+    if (error != CX_OK || !is_verified) {
         return -1;
     }
-
-    PRINTF("Signature: %.*H\n", sig_len, G_context.tx_info.signature);
-
-    G_context.tx_info.signature_len = sig_len;
-    G_context.tx_info.v = (uint8_t) (info & CX_ECCINFO_PARITY_ODD);
 
     return 0;
 }
@@ -67,7 +81,7 @@ void validate_transaction(bool choice) {
             G_context.state = STATE_NONE;
             io_send_sw(SW_SIGNATURE_FAIL);
         } else {
-            helper_send_response_sig();
+            helper_send_response_sig(0);
         }
     } else {
         G_context.state = STATE_NONE;

@@ -9,6 +9,7 @@
 #include "globals.h"
 #include "os_nvm.h"
 #include "os_pic.h"
+#include "rlp_decode.h"
 
 static void byte_to_hex(uint8_t byte, char *out) {
     const char hex_chars[] = "0123456789abcdef";
@@ -47,6 +48,38 @@ int decode_from_hex_string(const char *hex_str, uint8_t *out_bytes, size_t max_l
         out_bytes[i] = hex_string_to_byte(hex_val);
     }
     return (int)byte_len;
+}
+
+void print_tx(zond_tx_t tx) { 
+    PRINTF("======== ZOND TX ========\n");
+    PRINTF("Chain ID: 0x");
+    for (int i = 0; i < tx.chain_id_len; i++) PRINTF("%02x", tx.chain_id[i]);
+    PRINTF("\n");
+
+    PRINTF("Nonce: 0x");
+    for (int i = 0; i < tx.nonce_len; i++) PRINTF("%02x", tx.nonce[i]);
+    PRINTF("\n");
+
+    PRINTF("Gas Tip Cap: 0x");
+    for (int i = 0; i < tx.gas_tip_cap_len; i++) PRINTF("%02x", tx.gas_tip_cap[i]);
+    PRINTF("\n");
+
+    PRINTF("Gas Fee Cap: 0x");
+    for (int i = 0; i < tx.gas_fee_cap_len; i++) PRINTF("%02x", tx.gas_fee_cap[i]);
+    PRINTF("\n");
+
+    PRINTF("Gas: 0x");
+    for (int i = 0; i < tx.gas_len; i++) PRINTF("%02x", tx.gas[i]);
+    PRINTF("\n");
+
+    PRINTF("To: 0x");
+    for (int i = 0; i < 24; i++) PRINTF("%02x", tx.to[i]);
+    PRINTF("\n");
+
+    PRINTF("Value: 0x");
+    for (int i = 0; i < tx.value_len; i++) PRINTF("%02x", tx.value[i]);
+    PRINTF("\n");
+    PRINTF("================\n");
 }
 
 void print_polyveck(PolyVecK *a) {

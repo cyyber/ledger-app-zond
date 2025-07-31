@@ -69,11 +69,11 @@ int apdu_dispatcher(const command_t *cmd) {
 
             return handler_get_public_key(&buf, (bool) cmd->p1);
         case SIGN_TX:
-            if (cmd->p1 != DATA_FIRST && cmd->p1 != DATA_MORE && cmd->p1 != DATA_FIRST && cmd->p2 != 0) {
+            if (cmd->p1 != DATA_FIRST && cmd->p1 != DATA_MORE && cmd->p1 != DATA_LAST && cmd->p2 < 0 && cmd->p2 > 17) {
                 return io_send_sw(SW_WRONG_P1P2);
             }
 
-            if (!cmd->data) {
+            if (!cmd->data && cmd->p2 == 0) {
                 return io_send_sw(SW_WRONG_DATA_LENGTH);
             }
 
@@ -81,7 +81,7 @@ int apdu_dispatcher(const command_t *cmd) {
             buf.size = cmd->lc;
             buf.offset = 0;
 
-        return handler_sign_tx(&buf, cmd->p1);
+        return handler_sign_tx(&buf, cmd->p1, cmd->p2);
         default:
             return io_send_sw(SW_INS_NOT_SUPPORTED);
     }

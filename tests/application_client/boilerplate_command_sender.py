@@ -102,24 +102,24 @@ class BoilerplateCommandSender:
     def sign_tx(self, path: str, transaction: bytes) -> Generator[None, None, None]:
         self.backend.exchange(cla=CLA,
                               ins=InsType.SIGN_TX,
-                              p1=P1.P1_START,
-                              p2=P2.P2_MORE,
+                              p1=0x00,
+                              p2=0x00,
                               data=pack_derivation_path(path))
         messages = split_message(transaction, MAX_APDU_LEN)
-        idx: int = P1.P1_START + 1
+        # idx: int = P1.P1_START + 1
 
         for msg in messages[:-1]:
             self.backend.exchange(cla=CLA,
                                   ins=InsType.SIGN_TX,
-                                  p1=idx,
-                                  p2=P2.P2_MORE,
+                                  p1=0x01,
+                                  p2=0x00,
                                   data=msg)
-            idx += 1
+            # idx += 1
 
         with self.backend.exchange_async(cla=CLA,
                                          ins=InsType.SIGN_TX,
-                                         p1=idx,
-                                         p2=P2.P2_LAST,
+                                         p1=0x02,
+                                         p2=0x00,
                                          data=messages[-1]) as response:
             yield response
 

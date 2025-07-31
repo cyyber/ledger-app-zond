@@ -33,6 +33,9 @@
 #include "deserialize.h"
 #include "handle_swap.h"
 #include "validate.h"
+#include "send_response.h"
+#include "keccak256.h"
+#include "rlp_decode.h"
 
 #ifdef HAVE_SWAP
 static int check_and_sign_swap_tx(transaction_t *tx) {
@@ -59,8 +62,8 @@ static int check_and_sign_swap_tx(transaction_t *tx) {
 }
 #endif  // HAVE_SWAP
 
-int handler_sign_tx(buffer_t *cdata, uint8_t chunk) {
-    if (chunk == 0) {  // first APDU, parse BIP32 path
+int handler_sign_tx(buffer_t *cdata, uint8_t p1, uint8_t p2) {
+    if (p1 == 0) {
         explicit_bzero(&G_context, sizeof(G_context));
         G_context.req_type = CONFIRM_TRANSACTION;
         G_context.state = STATE_NONE;
@@ -74,7 +77,7 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk) {
 
         return io_send_sw(SW_OK);
 
-    } else {  // parse transaction
+    } else if (p1 == 1) { 
 
         if (G_context.req_type != CONFIRM_TRANSACTION) {
             return io_send_sw(SW_BAD_STATE);
@@ -89,49 +92,90 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk) {
         }
         G_context.tx_info.raw_tx_len += cdata->size;
 
-        if (chunk) {
-            // more APDUs with transaction part are expected.
-            // Send a SW_OK to signal that we have received the chunk
-            return io_send_sw(SW_OK);
+        PRINTF("current data len %d\n", G_context.tx_info.raw_tx_len);
+        PRINTF("chunk data size %d\n", cdata->size);
 
-        } else {
-            // last APDU for this transaction, let's parse, display and request a sign confirmation
+        // more APDUs with transaction part are expected.
+        // Send a SW_OK to signal that we have received the chunk
+        return io_send_sw(SW_OK);
 
-            buffer_t buf = {.ptr = G_context.tx_info.raw_tx,
-                            .size = G_context.tx_info.raw_tx_len,
-                            .offset = 0};
+    } else if(p1 == 2 && p2 == 0) {
+        if (G_context.req_type != CONFIRM_TRANSACTION) {
+            return io_send_sw(SW_BAD_STATE);
+        }
+        if (G_context.tx_info.raw_tx_len + cdata->size > sizeof(G_context.tx_info.raw_tx)) {
+            return io_send_sw(SW_WRONG_TX_LENGTH);
+        }
+        if (!buffer_move(cdata,
+                         G_context.tx_info.raw_tx + G_context.tx_info.raw_tx_len,
+                         cdata->size)) {
+            return io_send_sw(SW_TX_PARSING_FAIL);
+        }
+        G_context.tx_info.raw_tx_len += cdata->size;
 
-            parser_status_e status = transaction_deserialize(&buf, &G_context.tx_info.transaction);
-            PRINTF("Parsing status: %d.\n", status);
-            if (status != PARSING_OK) {
-                return io_send_sw(SW_TX_PARSING_FAIL);
-            }
+        PRINTF("current data len %d\n", G_context.tx_info.raw_tx_len);
+        PRINTF("chunk data size %d\n", cdata->size);
+        // last APDU for this transaction, let's parse, display and request a sign confirmation
 
-            G_context.state = STATE_PARSED;
+        // buffer_t buf = {.ptr = G_context.tx_info.raw_tx,
+        //                 .size = G_context.tx_info.raw_tx_len,
+        //                 .offset = 0};
 
-            if (cx_keccak_256_hash(G_context.tx_info.raw_tx,
-                                   G_context.tx_info.raw_tx_len,
-                                   G_context.tx_info.m_hash) != CX_OK) {
-                return io_send_sw(SW_TX_HASH_FAIL);
-            }
+        // parser_status_e status = transaction_deserialize(&buf, &G_context.tx_info.transaction);
+        // PRINTF("Parsing status: %d.\n", status);
+        // if (status != PARSING_OK) {
+        //     return io_send_sw(SW_TX_PARSING_FAIL);
+        // }
 
-            PRINTF("Hash: %.*H\n", sizeof(G_context.tx_info.m_hash), G_context.tx_info.m_hash);
-
+        G_context.state = STATE_PARSED;
 #ifdef HAVE_SWAP
-            // If we are in swap context, do not redisplay the message data
-            // Instead, ensure they are identical with what was previously displayed
-            if (G_called_from_swap) {
-                return check_and_sign_swap_tx(&G_context.tx_info.transaction);
-            }
+        // If we are in swap context, do not redisplay the message data
+        // Instead, ensure they are identical with what was previously displayed
+        // if (G_called_from_swap) {
+        //     return check_and_sign_swap_tx(&G_context.tx_info.transaction);
+        // }
 #endif  // HAVE_SWAP
 
-            // Example to trig a blind-sign flow
-            if (strcmp((char *) G_context.tx_info.transaction.memo, "Blind-sign") == 0) {
-                return ui_display_blind_signed_transaction();
-            } else {
-                return ui_display_transaction();
-            }
+        // Example to trig a blind-sign flow
+        // if (strcmp((char *) G_context.tx_info.transaction.memo, "Blind-sign") == 0) {
+        //     return ui_display_blind_signed_transaction();
+        // } else {
+        //     return ui_display_transaction();
+        // }
+
+        //Hash message
+        keccak256_ctx ctx;
+        keccak256_init(&ctx);
+        keccak256_absorb(&ctx, G_context.tx_info.raw_tx, G_context.tx_info.raw_tx_len);
+        keccak256_finalize(&ctx);
+        keccak256_squeeze(&ctx, G_context.tx_info.m_hash);
+        keccak256_clear(&ctx);
+        PRINTF("MESSAGE HASH: ");
+        for(int i = 0; i < 32; i++) {
+            PRINTF("%02x", G_context.tx_info.m_hash[i]);
         }
+        PRINTF("\n");
+
+        zond_tx_t tx;
+        explicit_bzero(&tx, sizeof(tx));
+        int err = decode_ledger_tx(G_context.tx_info.raw_tx, G_context.tx_info.raw_tx_len, &tx);
+        if(err != 0) {
+            PRINTF("Failed to decode\n");
+            return io_send_sw(SW_TX_PARSING_FAIL);
+        }
+
+        return ui_display_transaction(&tx);
+        // return ui_display_blind_signed_transaction();
+    } else if(p1 == 2 && p2 > 0 && p2 < 18) {
+        if (G_context.req_type != CONFIRM_TRANSACTION) {
+            return io_send_sw(SW_BAD_STATE);
+        }
+        if(N_storage.is_sending_signature) {
+            helper_send_response_sig(p2);
+        } else {
+            return io_send_sw(SW_BAD_STATE);
+        }
+        
     }
     return 0;
 }

@@ -1,83 +1,84 @@
 # Technical Specification
 
-> **Warning**
-This documentation is a template and shall be updated with your own APDUs.
-
 ## About
 
-This documentation describes the APDU messages interface to communicate with the Boilerplate application.
+This documentation describes the APDU messages interface to communicate with the Zond application.
 
 The application covers the following functionalities :
 
-- Get a public Boilerplate address given a BIP 32 path
-- Sign a basic Boilerplate transaction given a BIP 32 path and raw transaction
-- Retrieve the Boilerplate app version
-- Retrieve the Boilerplate app name
+- Get a public Zond address given a BIP 32 path
+- Sign a Zond transaction given a BIP 32 path and RLP encoded transaction data
+- Retrieve the Zond app version
+- Retrieve the Zond app name
 
 The application interface can be accessed over HID or BLE
 
 ## APDUs
 
-### GET BOILERPLATE PUBLIC ADDRESS
+### GET Zond PUBLIC ADDRESS
 
 #### Description
 
-This command returns the public key for the given BIP 32 path.
+This command returns the public Zond address for the given BIP 32 path.
 
-The address can be optionally checked on the device before being returned.
+The address can be verified on the device before being returned.
 
 #### Coding
 
 ##### `Command`
 
-| CLA | INS   | P1                                                 | P2    | Lc       | Le       |
-| --- | ---   | ---                                                | ---   | ---      | ---      |
-| E0  |  05   |  00 : return address                               | 00    | variable | variable |
-|     |       |  01 : display address and confirm before returning |       |          |          |
+| CLA | INS   | P1   | P2    | Lc  |
+| --- | ---   | ---  | ---   | --- |
+| E0  |  05   |  01  | 00    | 21  | 
 
 ##### `Input data`
 
 | Description                                                      | Length |
 | ---                                                              | ---    |
-| Number of BIP 32 derivations to perform (max 10)                 | 1      |
-| First derivation index (big endian)                              | 4      |
-| ...                                                              | 4      |
-| Last derivation index (big endian)                               | 4      |
+| Number of BIP 32 derivations to perform (always 5)               | 1      |
+| Purpose (`0x8000002C`)                                           | 4      |
+| Coin type (`0x800000EE`)                                         | 4      |
+| Account                                                          | 4      |
+| Change                                                           | 4      |
+| Address                                                          | 4      |
 
 ##### `Output data`
 
 | Description                                                      | Length |
 | ---                                                              | ---    |
-| Public Key length                                                | 1      |
-| Public Key                                                       | var    |
-| Chain code length                                                | 1      |
-| Chain code                                                       | var    |
+| Prefix (`Z`)                                                     | 1      |
+| Address                                                          | 24     |
 
-### SIGN BOILERPLATE TRANSACTION
+### SIGN Zond TRANSACTION
 
 #### Description
 
-This command signs a Boilerplate transaction after having the user validate the transactions parameters.
+This command signs a Zond transaction after having the user validate the transactions parameters.
 
 The input data is the RLP encoded transaction streamed to the device in 255 bytes maximum data chunks.
+
+As the signature size exceeds maximum APDU response length, responses will be chunked with max size of 258 bytes each. The main app should request each chunk manually with index from 0-17, where the first chunk will be automatically returned after the last transaction data is sent and the signature is computed.
 
 #### Coding
 
 ##### `Command`
 
-| CLA | INS  | P1                   | P2                               | Lc       | Le       |
-| --- | ---  | ---                  | ---                              | ---      | ---      |
-| E0  | 06   |  00-FF : chunk index | 00 : last transaction data block | variable | variable |
-|     |      |                      | 80 : subsequent transaction data block |    |          |
+| CLA | INS  | P1                   | P2                               | Lc       |
+| --- | ---  | ---                  | ---                              | ---      |
+| E0  | 06   |  00 : first data (BIP32 path) | 00 | variable |
+|     |      |  01 : more tx data                  | 01-11 : request more signature chunk | variable   |
+|     |      |  02 : last tx data                  | |   |
 
 ##### `Input data (first transaction data block)`
 
-| Description                                          | Length   |
-| ---                                                  | ---      |
-| Number of BIP 32 derivations to perform (max 10)     | 1        |
-| First derivation index (big endian)                  | 4        |
-| ...                                                  | 4        |
-| Last derivation index (big endian)                   | 4        |
+| Description                                                      | Length |
+| ---                                                              | ---    |
+| Number of BIP 32 derivations to perform (always 5)               | 1      |
+| Purpose (`0x8000002C`)                                           | 4      |
+| Coin type (`0x800000EE`)                                         | 4      |
+| Account                                                          | 4      |
+| Change                                                           | 4      |
+| Address                                                          | 4      |
 
 ##### `Input data (other transaction data block)`
 
@@ -85,27 +86,29 @@ The input data is the RLP encoded transaction streamed to the device in 255 byte
 | ---                                                  | ---      |
 | Transaction chunk                                    | variable |
 
+##### `Input data (request more signature chunk)`
+
+None
+
 ##### `Output data`
 
 | Description                                          | Length   |
 | ---                                                  | ---      |
-| Signature length                                     | 1        |
 | Signature                                            | variable |
-| v                                                    | 1        |
 
 ### GET APP VERSION
 
 #### Description
 
-This command returns boilerplate application version
+This command returns Zond application version
 
 #### Coding
 
 ##### `Command`
 
-| CLA | INS | P1  | P2  | Lc   | Le |
-| --- | --- | --- | --- | ---  | ---|
-| E0  | 03  | 00  | 00  | 00   | 04 |
+| CLA | INS | P1  | P2  | Lc   |
+| --- | --- | --- | --- | ---  |
+| E0  | 03  | 00  | 00  | 00   |
 
 ##### `Input data`
 
@@ -115,23 +118,23 @@ None
 
 | Description                       | Length |
 | ---                               | ---    |
-| Application major version         | 01 |
-| Application minor version         | 01 |
-| Application patch version         | 01 |
+| Application major version         | 1      |
+| Application minor version         | 1      |
+| Application patch version         | 1      |
 
 ### GET APP NAME
 
 #### Description
 
-This command returns boilerplate application name
+This command returns Zond application name
 
 #### Coding
 
 ##### `Command`
 
-| CLA | INS | P1  | P2  | Lc   | Le |
-| --- | --- | --- | --- | ---  | ---|
-| E0  | 04  | 00  | 00  | 00   | 04 |
+| CLA | INS | P1  | P2  | Lc   |
+| --- | --- | --- | --- | ---  |
+| E0  | 04  | 00  | 00  | 00   |
 
 ##### `Input data`
 

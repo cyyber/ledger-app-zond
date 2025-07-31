@@ -51,6 +51,9 @@
 #define CTX_LEN 4
 #define MESSAGE_LEN 500
 
+#define SIGNATURE_CHUNK_SIZE 258
+#define SIGNATURE_LAST_CHUNK_SIZE 241
+
 extern const int ZETAS[N];
 extern const uint8_t CTX[4];
 

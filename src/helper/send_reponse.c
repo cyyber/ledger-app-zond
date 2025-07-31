@@ -26,6 +26,8 @@
 #include "globals.h"
 #include "sw.h"
 
+
+
 int helper_send_response_pubkey() {
     uint8_t resp[1 + ADDRESS_SIZE] = {0};
     size_t offset = 0;
@@ -37,12 +39,36 @@ int helper_send_response_pubkey() {
     return io_send_response_pointer(resp, offset, SW_OK);
 }
 
-int helper_send_response_sig() {
-    uint8_t resp[2] = {0};
-    size_t offset = 0;
+int helper_send_response_sig(uint8_t index) {
+    if(index < 17) {
+        uint8_t resp[SIGNATURE_CHUNK_SIZE] = {0};
+        size_t offset = 0;
 
-    resp[offset++] = 1;
-    resp[offset++] = 1;
+        for(int i = 0; i < SIGNATURE_CHUNK_SIZE; i++) {
+            resp[i] = N_storage.sig[i + index*SIGNATURE_CHUNK_SIZE];
+        }
+        offset += SIGNATURE_CHUNK_SIZE;
 
-    return io_send_response_pointer(resp, offset, SW_OK);
+        io_send_response_pointer(resp, offset, SW_OK);
+    } else {
+        uint8_t resp[SIGNATURE_LAST_CHUNK_SIZE] = {0};
+        size_t offset = 0;
+
+        for(int i = 0; i < SIGNATURE_LAST_CHUNK_SIZE; i++) {
+            resp[i] = N_storage.sig[i + index*SIGNATURE_CHUNK_SIZE];
+        }
+        offset += SIGNATURE_LAST_CHUNK_SIZE;
+
+        io_send_response_pointer(resp, offset, SW_OK);
+    }
+
+    if(index == 0) {
+        uint8_t temp = 1;
+        nvm_write((void *)&N_storage.is_sending_signature, &temp, sizeof(uint8_t));
+    } else if(index == 17) {
+        uint8_t temp = 0;
+        nvm_write((void *)&N_storage.is_sending_signature, &temp, sizeof(uint8_t));
+    }
+
+    return 0;
 }

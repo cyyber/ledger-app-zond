@@ -8,6 +8,7 @@
 #include "constants.h"
 #include "tx_types.h"
 #include "constant.h"
+#include "rlp_decode.h"
 
 /**
  * Enumeration with expected INS of APDU commands.
@@ -70,5 +71,7 @@ typedef struct {
     request_type_e req_type;              /// user request
     uint32_t bip32_path[MAX_BIP32_PATH];  /// BIP32 path
     uint8_t bip32_path_len;               /// length of BIP32 path
-    uint8_t address[ADDRESS_SIZE];
+    uint8_t address[ADDRESS_SIZE];  
 } global_ctx_t;
+
+

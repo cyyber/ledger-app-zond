@@ -9,7 +9,8 @@
         "array": "c",
         "string": "c",
         "string_view": "c",
-        "span": "c"
+        "span": "c",
+        "initializer_list": "c"
     },
     "ledgerDevTools.appSettings": {
         "selectedUseCase": "debug",
@@ -24,14 +25,11 @@
             "test_wrong_data_length",
             "test_invalid_state",
             "test_get_app_and_version",
-            "test_get_public_key_no_confirm",
             "test_get_public_key_confirm_accepted",
-            "test_get_public_key_confirm_refused",
             "test_sign_tx_short_tx",
-            "test_sign_tx_short_tx_blind_sign",
-            "test_sign_tx_long_tx",
             "test_sign_tx_refused",
             "test_version"
-        ]
+        ],
+        "selectedTests": []
     }
 }
