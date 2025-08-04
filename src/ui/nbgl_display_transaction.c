@@ -41,6 +41,7 @@ static char g_from_address[50];
 static char g_amount[30];
 static char g_to_address[50];
 static char g_max_fees[30];
+// static char dec[10];
 
 static nbgl_contentTagValue_t pairs[4];
 static nbgl_contentTagValueList_t pairList;
@@ -147,17 +148,7 @@ static void bytes_to_hex_string(uint8_t *byte, size_t byte_len, char *str) {
     }
 }
 
-// Public function to start the transaction review
-// - Check if the app is in the right state for transaction review
-// - Format the amount and address strings in g_amount and g_address buffers
-// - Display the first screen of the transaction review
-// - Display a warning if the transaction is blind-signed
-int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
-    if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED) {
-        G_context.state = STATE_NONE;
-        return io_send_sw(SW_BAD_STATE);
-    }
-
+void print_tx_utils(zond_tx_t *tx) { 
     PRINTF("======== ZOND TX ========\n");
     PRINTF("Chain ID: 0x");
     for (int i = 0; i < tx->chain_id_len; i++) PRINTF("%02x", tx->chain_id[i]);
@@ -180,13 +171,27 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
     PRINTF("\n");
 
     PRINTF("To: 0x");
-    for (int i = 0; i < ADDRESS_LENGTH; i++) PRINTF("%02x", tx->to[i]);
+    for (int i = 0; i < 24; i++) PRINTF("%02x", tx->to[i]);
     PRINTF("\n");
 
     PRINTF("Value: 0x");
     for (int i = 0; i < tx->value_len; i++) PRINTF("%02x", tx->value[i]);
     PRINTF("\n");
     PRINTF("================\n");
+}
+
+// Public function to start the transaction review
+// - Check if the app is in the right state for transaction review
+// - Format the amount and address strings in g_amount and g_address buffers
+// - Display the first screen of the transaction review
+// - Display a warning if the transaction is blind-signed
+int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
+    if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED) {
+        G_context.state = STATE_NONE;
+        return io_send_sw(SW_BAD_STATE);
+    }
+
+    print_tx_utils(tx);
 
     PRINTF("DERIVE ADDRESS START\n");
     nbgl_useCaseSpinner("Getting address");
@@ -199,6 +204,18 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
         PRINTF("%02x", G_context.address[i]);
     }
     PRINTF("\n");
+
+    // Format nonce
+    // uint8_array_to_decimal(tx->nonce, tx->nonce_len, dec);
+
+    // Format tx hash
+    // char tx_hash[65] = {0};
+    // memset(tx_hash, 0, sizeof(tx_hash));
+    // bytes_to_hex_string(G_context.tx_info.m_hash, 32, tx_hash);
+    // tx_hash[64] = '\0';
+    // PRINTF("tx hash %s\n", tx_hash);
+    // memset(g_tx_hash, 0, sizeof(g_tx_hash));
+    // snprintf(g_amount, sizeof(g_amount), "ZND %.*s", sizeof(amount), amount);
 
     //Format from address
     memset(g_from_address, 0, sizeof(g_from_address));
@@ -240,6 +257,10 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
     pairs[2].value = g_to_address;
     pairs[3].item = "Max fees";
     pairs[3].value = g_max_fees;
+    // pairs[4].item = "Nonce";
+    // pairs[4].value = dec;
+    // pairs[5].item = "Tx hash";
+    // pairs[5].value = tx_hash;
 
     // Setup list
     pairList.nbMaxLinesForValue = 0;

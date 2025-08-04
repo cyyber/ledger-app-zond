@@ -33,7 +33,7 @@ def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: Navigat
     #     memo="For u EthDev"
     # ).serialize()
 
-    transaction = bytes.fromhex("02f001038477359400850ba43b74008261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a000080c0")
+    transaction = bytes.fromhex("02f89601038477359400850ba43b74008261a898b94f5374fce5edbc8e2a8697c15331677e6ebf0b0000000088016345785d8a0000825544f85ff85d98b94f5374fce5edbc8e2a8697c15331677e6ebf0b00000000f842a00000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000001")
 
     # Send the sign device instruction.
     # As it requires on-screen validation, the function is asynchronous.
@@ -46,7 +46,7 @@ def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: Navigat
     response = client.get_async_response()
     # _, der_sig, _ = unpack_sign_tx_response(response)
     # assert check_signature_validity(public_key, der_sig, transaction)
-    assert response.data.hex() == "4dd68f397e1b07969434e915e80c4598b0d12438fda9667368e873eb2f8e5c64b52728707fffc5c0cbc7697b998e5f0f89ae5a67f4abd69401949842fa2b7653b24fc8963d7facdcf282932b6efb17b5eaf415f153ad796655db72a25c0d34eda95c99d03ca8c2de601ac1ed14b5e639290298f007e2f7e2c593f038059720d1b1d7b30b2a97a158270cedf92d38daae2bf1ec69af50cca73deee6e6bcec600e0b837e21e5e2e02f437d45b5c8d9511e091d0cb83055f06adfc02e4d11269942cbacde6a2c4af0345668ea38d30a0e627142cf17f404d84c4524222e6ad129a76be7d429d1f3cc72753c8f4fbe5bd627959afe961b645c03f9628f329bb8c6194a2e"
+    assert response.data.hex() == "c3172f4762fbda664a209b347ebe73d73f7bb6abef0c08e5f5721b7bcd2999a799177bfe0c729f3cd825dd068cd9dc2f9dfe3cd6c381fb44fd8a2fb73f640628ef2db66d8ab1071ece1d15b90999bb7fbfbeb9071eb45459abf51d298c96c4e53ff23b0ca87725887d78900425ee5c7481e278ab708a26a9b726e90b631ed46d16f98ed5d61e223a936b82c82df0e2b0eec1cf4bb6ffc9d225a8effcf92109afeb5ec182785d724132c58107ac5436b68287ea7112b716ae803a87f77ee863664c058fd31ddc70c9e91715d28f94d7b756a23741bae1db9ee2f99d24b0b4c2e639609a18cff1627ca9d01dd2b5a1be41b682425264ed108d17829dba7106eb0f676d"
 
 # In this test we send to the device a transaction to trig a blind-signing flow
 # The transaction is short and will be sent in one chunk
@@ -86,7 +86,7 @@ def test_sign_tx_refused(backend: BackendInterface, scenario_navigator: Navigate
     client = BoilerplateCommandSender(backend)
     path: str = "m/44'/238'/0'/0/0"
 
-    transaction = bytes.fromhex("02f001038477359400850ba43b74008261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a000080c0")
+    transaction = bytes.fromhex("02f89601038477359400850ba43b74008261a898b94f5374fce5edbc8e2a8697c15331677e6ebf0b0000000088016345785d8a0000825544f85ff85d98b94f5374fce5edbc8e2a8697c15331677e6ebf0b00000000f842a00000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000001")
 
     with pytest.raises(ExceptionRAPDU) as e:
         with client.sign_tx(path=path, transaction=transaction):
