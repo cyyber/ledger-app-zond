@@ -19,7 +19,7 @@
 #define POLY_UNIFORM_GAMMA1_N_BLOCKS \
     ((POLY_Z_PACKED_BYTES + STREAM_256_BLOCK_BYTES - 1) / STREAM_256_BLOCK_BYTES)
 
-#define ADDRESS_SIZE 24
+#define ADDRESS_SIZE 20
 #define DESCRIPTOR_BYTES 3
 #define SEED_BYTES 32
 #define CRH_BYTES  64  // hash of public key
@@ -53,6 +53,10 @@
 
 #define SIGNATURE_CHUNK_SIZE 258
 #define SIGNATURE_LAST_CHUNK_SIZE 241
+
+#define PK_CHUNK_SIZE 258
+#define PK_LAST_CHUNK_SIZE 12
+#define PK_CHUNKS 11
 
 extern const int ZETAS[N];
 extern const uint8_t CTX[4];

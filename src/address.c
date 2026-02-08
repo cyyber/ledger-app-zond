@@ -22,6 +22,7 @@
 
 #include "os.h"
 #include "cx.h"
+#include "crypto_helpers.h"
 #include "ledger_assert.h"
 #include "nbgl_use_case.h"
 
@@ -61,15 +62,19 @@ cx_err_t address_from_bip32_path(const uint32_t bip32_path[], size_t bip32_path_
         raw_seed,
         NULL
     );
-    if(err != 0) {
-        return -1;
+    if(err != CX_OK) {
+        return err;
     }
     uint8_t mldsa87_seed[32] = {0};
     for(int i = 0; i < 32; i++) {
         mldsa87_seed[i] = raw_seed[i];
     }
+    explicit_bzero(raw_seed, sizeof(raw_seed));
     nbgl_useCaseSpinner("Getting address");
-    new_mldsa87_from_seed(&mldsa87_seed);
+    ErrorCode mldsa_err = new_mldsa87_from_seed(&mldsa87_seed);
+    if(mldsa_err != ERR_NONE) {
+        return CX_INTERNAL_ERROR;
+    }
 
     // uint8_t input[(DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES)*2] = {0};
     // explicit_bzero(input, (DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES)*2);

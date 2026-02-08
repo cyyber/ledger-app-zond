@@ -61,5 +61,9 @@ int handler_get_public_key(buffer_t *cdata, bool display) {
         return ui_display_address();
     }
 
-    return helper_send_response_pubkey();
+    return helper_send_response_address();
+}
+
+int handler_get_public_key_chunk(uint8_t chunk_index) {
+    return helper_send_response_pk_chunk(chunk_index);
 }

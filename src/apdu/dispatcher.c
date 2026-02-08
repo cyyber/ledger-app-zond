@@ -55,8 +55,15 @@ int apdu_dispatcher(const command_t *cmd) {
 
             return handler_get_app_name();
         case GET_PUBLIC_KEY:
-            if (cmd->p1 > 1 || cmd->p2 > 0) {
+            // P2 = 0: Return address (with derivation path in data)
+            // P2 = 1-11: Return public key chunk (P2-1 is chunk index 0-10)
+            if (cmd->p1 > 1 || cmd->p2 > 11) {
                 return io_send_sw(SW_WRONG_P1P2);
+            }
+
+            if (cmd->p2 > 0) {
+                // Return public key chunk (must call after P2=0 to derive key first)
+                return handler_get_public_key_chunk(cmd->p2 - 1);
             }
 
             if (!cmd->data) {
