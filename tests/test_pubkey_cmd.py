@@ -36,7 +36,7 @@ def test_get_public_key_confirm_accepted(backend: BackendInterface, scenario_nav
         scenario_navigator.address_review_approve()
 
     response = client.get_async_response().data
-    assert response.hex()=="5ab4e287d018d332fad931ef4297a727e189492ff7a5b5f88e"
+    assert response.hex()=="5a18d332fad931ef4297a727e189492ff7a5b5f88e"
     # _, public_key, _, chain_code = unpack_get_public_key_response(response)
 
     # ref_public_key, ref_chain_code = calculate_public_key_and_chaincode(CurveChoice.Secp256k1, path=path)

@@ -25,10 +25,9 @@
 #include "constants.h"
 #include "globals.h"
 #include "sw.h"
+#include "constant.h"
 
-
-
-int helper_send_response_pubkey() {
+int helper_send_response_address() {
     uint8_t resp[1 + ADDRESS_SIZE] = {0};
     size_t offset = 0;
 
@@ -70,5 +69,19 @@ int helper_send_response_sig(uint8_t index) {
         nvm_write((void *)&N_storage.is_sending_signature, &temp, sizeof(uint8_t));
     }
 
+    return 0;
+}
+
+int helper_send_response_pk_chunk(uint8_t index) {
+    if(index >= PK_CHUNKS) {
+        return io_send_sw(SW_WRONG_DATA_LENGTH);
+    }
+
+    size_t chunk_size = (index < PK_CHUNKS - 1) ? PK_CHUNK_SIZE : PK_LAST_CHUNK_SIZE;
+    uint8_t resp[PK_CHUNK_SIZE] = {0};
+    for(size_t i = 0; i < chunk_size; i++) {
+        resp[i] = N_storage.pk[i + index * PK_CHUNK_SIZE];
+    }
+    io_send_response_pointer(resp, chunk_size, SW_OK);
     return 0;
 }
