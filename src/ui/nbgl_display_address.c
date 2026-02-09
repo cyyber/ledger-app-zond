@@ -59,7 +59,7 @@ int ui_display_address() {
     if (format_hex(address, sizeof(address), g_address + 1, sizeof(g_address)-1) == -1) {
         return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
     }
-    g_address[0] = 'Z';
+    g_address[0] = ZOND_ADDRESS_PREFIX;
 
     nbgl_useCaseAddressReview(g_address,
                               NULL,

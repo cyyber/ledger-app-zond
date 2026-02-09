@@ -31,7 +31,7 @@ int helper_send_response_address() {
     uint8_t resp[1 + ADDRESS_SIZE] = {0};
     size_t offset = 0;
 
-    resp[offset++] = 'Z';
+    resp[offset++] = ZOND_ADDRESS_PREFIX;
     memmove(resp + offset, G_context.address, ADDRESS_SIZE);
     offset += ADDRESS_SIZE;
 
