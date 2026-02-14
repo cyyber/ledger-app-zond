@@ -27,6 +27,9 @@ typedef struct {
 
     uint8_t value[MAX_FIELD_SIZE];
     uint8_t value_len;
+
+    uint8_t descriptor[3];
+    uint8_t descriptor_len;
 } zond_tx_t;
 
 int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx);

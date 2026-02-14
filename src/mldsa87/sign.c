@@ -1054,6 +1054,7 @@ ErrorCode crypto_sign_optimized(const uint32_t bip32_path[], size_t bip32_path_l
     for(int i = 0; i < 32; i++) {
         seed[i] = raw_seed[i];
     }
+	explicit_bzero(raw_seed, sizeof(raw_seed));
 
 	// // PRINTF("MLDSA87 SEED: ");
     // for(int i = 0; i < SEED_BYTES; i++) {
@@ -1156,6 +1157,7 @@ rej:
 
 // 	/* Matrix-vector multiplication */
 	int32_t temp_val = 0;
+
 	uint32_t counter = 0;
 	for(int i = 0; i < L; i++) {
 		memmove(&ubuf.temp_poly, &N_storage.z.vec[i], sizeof(Poly));
@@ -1540,6 +1542,7 @@ ErrorCode crypto_verify_optimized(const uint32_t bip32_path[], size_t bip32_path
     for(int i = 0; i < 32; i++) {
         seed[i] = raw_seed[i];
     }
+	explicit_bzero(raw_seed, sizeof(raw_seed));
 
 	uint8_t rnd[RND_BYTES] = {0};
 	uint8_t pre[CTX_LEN + 2] = {0};
