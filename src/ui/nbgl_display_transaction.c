@@ -215,14 +215,14 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
     // tx_hash[64] = '\0';
     // PRINTF("tx hash %s\n", tx_hash);
     // memset(g_tx_hash, 0, sizeof(g_tx_hash));
-    // snprintf(g_amount, sizeof(g_amount), "ZND %.*s", sizeof(amount), amount);
+    // snprintf(g_amount, sizeof(g_amount), "QRL %.*s", sizeof(amount), amount);
 
     //Format from address
     memset(g_from_address, 0, sizeof(g_from_address));
     char from_str[ADDRESS_SIZE*2+1] = {0}; 
     bytes_to_hex_string(G_context.address, ADDRESS_SIZE, from_str);
     strncpy(g_from_address + 1, from_str, sizeof(g_from_address)-1);
-    g_from_address[0] = 'Z';
+    g_from_address[0] = ZOND_ADDRESS_PREFIX;
 
     // Format amount
     char amount[30] = {0};
@@ -230,7 +230,7 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
     convert_amount_to_eth(tx->value, tx->value_len, amount);
     PRINTF("amount %s\n", amount);
     memset(g_amount, 0, sizeof(g_amount));
-    snprintf(g_amount, sizeof(g_amount), "ZND %.*s", sizeof(amount), amount);
+    snprintf(g_amount, sizeof(g_amount), "QRL %.*s", sizeof(amount), amount);
 
     //Format to address
     memset(g_to_address, 0, sizeof(g_to_address));
@@ -238,7 +238,7 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
     bytes_to_hex_string(tx->to, ADDRESS_LENGTH, to_str);
     PRINTF("to %s\n", to_str);
     strncpy(g_to_address + 1, to_str, sizeof(g_to_address)-1);
-    g_to_address[0] = 'Z';
+    g_to_address[0] = ZOND_ADDRESS_PREFIX;
 
     // Format max_fees
     char max_fees[30] = {0};
@@ -246,7 +246,7 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
     convert_amount_to_eth(tx->gas_fee_cap, tx->gas_fee_cap_len, max_fees);
     PRINTF("max fees %s\n", max_fees);
     memset(g_max_fees, 0, sizeof(g_max_fees));
-    snprintf(g_max_fees, sizeof(g_max_fees), "ZND %.*s", sizeof(max_fees), max_fees);
+    snprintf(g_max_fees, sizeof(g_max_fees), "QRL %.*s", sizeof(max_fees), max_fees);
 
     // Setup data to display
     pairs[0].item = "From";

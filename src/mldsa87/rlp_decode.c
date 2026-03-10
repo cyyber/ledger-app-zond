@@ -228,6 +228,16 @@ int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx) {
     }
     p += consumed; remaining -= consumed;
 
+    // 10. descriptor (ML-DSA-87: wallet_type + metadata, 3 bytes)
+    consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
+    if (consumed < 0 || val_len > 3) {
+        PRINTF("Invalid descriptor field\n");
+        return -1;
+    }
+    memcpy(tx->descriptor, val_ptr, val_len);
+    tx->descriptor_len = val_len;
+    p += consumed; remaining -= consumed;
+
     if (p != payload_end) {
         PRINTF("Payload length mismatch\n");
         return -1;

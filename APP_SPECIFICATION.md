@@ -46,8 +46,8 @@ The address can be verified on the device before being returned.
 
 | Description                                                      | Length |
 | ---                                                              | ---    |
-| Prefix (`Z`)                                                     | 1      |
-| Address                                                          | 24     |
+| Prefix (`Q`)                                                     | 1      |
+| Address                                                          | 20     |
 
 ### SIGN Zond TRANSACTION
 

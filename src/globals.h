@@ -27,7 +27,6 @@ typedef struct internal_storage_t {
     PolyVecL z;
     Poly cp;
     union {
-        uint8_t address_hash_input[(DESCRIPTOR_BYTES + CRYPTO_PUBLIC_KEY_BYTES) * 2];
         PolyVecK t0;
         uint8_t buf_verify[K*POLY_W1_PACKED_BYTES];
     } pack1;
