@@ -78,14 +78,14 @@ void swap_handle_check_address(check_address_parameters_t *params) {
     uint8_t address[ADDRESS_LEN] = {0};
     address_from_pubkey(pk_info.raw_public_key, address, sizeof(address));
 
-    char derived_address[41];
+    char derived_address[ADDRESS_LEN * 2 + 1];
     memset(derived_address, 0, sizeof(derived_address));
     format_hex(address, sizeof(address), derived_address, sizeof(derived_address));
     PRINTF("Derived address %s\n", derived_address);
 
     PRINTF("Checked address %s\n", params->address_to_check);
 
-    if (strncmp(derived_address, params->address_to_check, sizeof(derived_address)) != 0) {
+    if (strncmp(derived_address, params->address_to_check, ADDRESS_LEN * 2) != 0) {
         PRINTF("Addresses do not match\n");
     } else {
         PRINTF("Addresses match\n");

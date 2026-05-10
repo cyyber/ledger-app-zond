@@ -23,7 +23,7 @@ endif
 #        Mandatory configuration       #
 ########################################
 # Application name
-APPNAME = "Boilerplate"
+APPNAME = "QRL"
 
 # Application version
 APPVERSION_M = 2

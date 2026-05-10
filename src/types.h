@@ -43,7 +43,7 @@ typedef enum {
 typedef struct {
     uint8_t raw_public_key[65];  /// format (1), x-coordinate (32), y-coodinate (32)
     uint8_t chain_code[32];      /// for public key derivation
-    uint8_t address[24];
+    uint8_t address[ADDRESS_SIZE];
 } pubkey_ctx_t;
 
 /**
@@ -73,5 +73,4 @@ typedef struct {
     uint8_t bip32_path_len;               /// length of BIP32 path
     uint8_t address[ADDRESS_SIZE];  
 } global_ctx_t;
-
 

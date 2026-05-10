@@ -37,9 +37,9 @@
 #include "address.h"
 #include "utils.h"
 
-static char g_from_address[50];
+static char g_from_address[1 + ADDRESS_SIZE * 2 + 1];
 static char g_amount[30];
-static char g_to_address[50];
+static char g_to_address[1 + ADDRESS_LENGTH * 2 + 1];
 static char g_max_fees[30];
 // static char dec[10];
 
@@ -171,7 +171,7 @@ void print_tx_utils(zond_tx_t *tx) {
     PRINTF("\n");
 
     PRINTF("To: 0x");
-    for (int i = 0; i < 24; i++) PRINTF("%02x", tx->to[i]);
+    for (int i = 0; i < ADDRESS_LENGTH; i++) PRINTF("%02x", tx->to[i]);
     PRINTF("\n");
 
     PRINTF("Value: 0x");
