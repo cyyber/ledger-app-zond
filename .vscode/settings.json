@@ -23,7 +23,7 @@
     "ledgerDevTools.appSettings": {
         "selectedUseCase": "debug",
         "selectedDevice": "Nano S Plus",
-        "selectedVariant": "BOL",
+        "selectedVariant": "QRL",
         "testsList": [
             "test_app_mainmenu",
             "test_app_name",

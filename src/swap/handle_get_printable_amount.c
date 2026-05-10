@@ -38,7 +38,7 @@ void swap_handle_get_printable_amount(get_printable_amount_parameters_t* params)
         PRINTF("Formatted amount: %s\n", amount);
         snprintf(params->printable_amount,
                  sizeof(params->printable_amount),
-                 "BOL %.*s",
+                 "QRL %.*s",
                  sizeof(amount),
                  amount);
     } else {

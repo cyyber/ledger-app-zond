@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Ledger App Boilerplate.
+ *   Ledger App QRL.
  *   (c) 2020 Ledger SAS.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -271,7 +271,7 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
         // Start blind-signing review flow
         nbgl_useCaseReviewBlindSigning(TYPE_TRANSACTION,
                                        &pairList,
-                                       &ICON_APP_BOILERPLATE,
+                                       &ICON_APP_QRL,
                                        "Review transaction\n",
                                        NULL,
 #ifdef SCREEN_SIZE_WALLET
@@ -285,7 +285,7 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
         // Start review flow
         nbgl_useCaseReview(TYPE_TRANSACTION,
                            &pairList,
-                           &ICON_APP_BOILERPLATE,
+                           &ICON_APP_QRL,
                            "Review transaction\n",
                            NULL,
 #ifdef SCREEN_SIZE_WALLET
