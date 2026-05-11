@@ -8,7 +8,7 @@
 /**
  * Convert public key to address.
  *
- * address = Keccak256(public_key)[12:32] (20 bytes)
+ * address = zero-left-padded Keccak256(public_key) (48 bytes)
  *
  * @param[in]  public_key
  *   Pointer to byte buffer with public key.

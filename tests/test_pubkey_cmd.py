@@ -5,8 +5,8 @@ from ragger.error import ExceptionRAPDU
 from ragger.backend.interface import BackendInterface
 from ragger.navigator.navigation_scenario import NavigateWithScenario
 
-from application_client.boilerplate_command_sender import BoilerplateCommandSender, Errors
-from application_client.boilerplate_response_unpacker import unpack_get_public_key_response
+from application_client.qrl_command_sender import QrlCommandSender, Errors
+from application_client.qrl_response_unpacker import unpack_get_public_key_response
 
 
 # In this test we check that the GET_PUBLIC_KEY works in non-confirmation mode
@@ -19,7 +19,7 @@ from application_client.boilerplate_response_unpacker import unpack_get_public_k
 #         "m/44'/1'/2147483647/0/0/0/0/0/0/0"
 #     ]
 #     for path in path_list:
-#         client = BoilerplateCommandSender(backend)
+#         client = QrlCommandSender(backend)
 #         response = client.get_public_key(path=path).data
 #         _, public_key, _, chain_code = unpack_get_public_key_response(response)
 
@@ -30,14 +30,14 @@ from application_client.boilerplate_response_unpacker import unpack_get_public_k
 
 # In this test we check that the GET_PUBLIC_KEY works in confirmation mode
 def test_get_public_key_confirm_accepted(backend: BackendInterface, scenario_navigator: NavigateWithScenario) -> None:
-    client = BoilerplateCommandSender(backend)
+    client = QrlCommandSender(backend)
     path = "m/44'/238'/0'/0/0"
     with client.get_public_key_with_confirmation(path=path):
         scenario_navigator.address_review_approve()
 
     response = client.get_async_response().data
-    # Q prefix (0x51) + 20-byte address = 21 bytes total
-    assert len(response) == 21
+    # Q prefix (0x51) + 48-byte address = 49 bytes total
+    assert len(response) == 49
     assert response[0] == ord('Q')
     # To get the exact expected value, run with: pytest -s and check the output
     print(f"Address hex: {response.hex()}")
@@ -50,7 +50,7 @@ def test_get_public_key_confirm_accepted(backend: BackendInterface, scenario_nav
 
 # In this test we check that the GET_PUBLIC_KEY in confirmation mode replies an error if the user refuses
 # def test_get_public_key_confirm_refused(backend: BackendInterface, scenario_navigator: NavigateWithScenario) -> None:
-#     client = BoilerplateCommandSender(backend)
+#     client = QrlCommandSender(backend)
 #     path = "m/44'/1'/0'/0/0"
 
 #     with pytest.raises(ExceptionRAPDU) as e:

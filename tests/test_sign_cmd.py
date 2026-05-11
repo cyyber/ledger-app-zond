@@ -4,9 +4,9 @@ from ragger.backend.interface import BackendInterface
 from ragger.error import ExceptionRAPDU
 from ragger.navigator.navigation_scenario import NavigateWithScenario
 
-from application_client.boilerplate_transaction import Transaction
-from application_client.boilerplate_command_sender import BoilerplateCommandSender, Errors
-from application_client.boilerplate_response_unpacker import unpack_get_public_key_response, unpack_sign_tx_response
+from application_client.qrl_transaction import Transaction
+from application_client.qrl_command_sender import QrlCommandSender, Errors
+from application_client.qrl_response_unpacker import unpack_get_public_key_response, unpack_sign_tx_response
 from utils import check_signature_validity
 
 # In this tests we check the behavior of the device when asked to sign a transaction
@@ -17,7 +17,7 @@ from utils import check_signature_validity
 # We will ensure that the displayed information is correct by using screenshots comparison
 def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: NavigateWithScenario) -> None:
     # Use the app interface instead of raw interface
-    client = BoilerplateCommandSender(backend)
+    client = QrlCommandSender(backend)
     # The path used for this entire test
     path: str = "m/44'/238'/0'/0/0"
 
@@ -33,11 +33,12 @@ def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: Navigat
     #     memo="For u EthDev"
     # ).serialize()
 
-    # Transaction with 20-byte addresses (updated from 24-byte)
+    # Transaction with a 48-byte recipient address.
     # RLP: type=02, chain_id=1, nonce=3, gas_tip_cap, gas_fee_cap, gas=25000,
-    #      to=b94f5374fce5edbc8e2a8697c15331677e6ebf0b (20 bytes), value, data, access_list,
+    #      to=00000000000000000000000000000000000000000000000000000000b94f5374fce5edbc8e2a8697c15331677e6ebf0b,
+    #      value, data, access_list,
     #      descriptor=[0x01, 0x00, 0x00] (ML-DSA-87)
-    transaction = bytes.fromhex("02f89201038477359400850ba43b74008261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a0000825544f85bf85994b94f5374fce5edbc8e2a8697c15331677e6ebf0bf842a00000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000183010000")
+    transaction = bytes.fromhex("02f85201038477359400850ba43b74008261a8b000000000000000000000000000000000000000000000000000000000b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a0000825544c083010000")
 
     # Send the sign device instruction.
     # As it requires on-screen validation, the function is asynchronous.
@@ -50,7 +51,7 @@ def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: Navigat
     response = client.get_async_response()
     # _, der_sig, _ = unpack_sign_tx_response(response)
     # assert check_signature_validity(public_key, der_sig, transaction)
-    # Note: Signature will be different due to new transaction data with 20-byte addresses
+    # Note: Signature will be different due to new transaction data with 48-byte addresses
     assert len(response.data) > 0  # Just verify we got a signature
 
 # In this test we send to the device a transaction to trig a blind-signing flow
@@ -58,7 +59,7 @@ def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: Navigat
 # We will ensure that the displayed information is correct by using screenshots comparison
 # def test_sign_tx_short_tx_blind_sign(backend: BackendInterface, scenario_navigator: NavigateWithScenario) -> None:
 #     # Use the app interface instead of raw interface
-#     client = BoilerplateCommandSender(backend)
+#     client = QrlCommandSender(backend)
 #     # The path used for this entire test
 #     path: str = "m/44'/238'/0'/0/0"
 
@@ -88,11 +89,11 @@ def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: Navigat
 # The test will ask for a transaction signature that will be refused on screen
 def test_sign_tx_refused(backend: BackendInterface, scenario_navigator: NavigateWithScenario) -> None:
     # Use the app interface instead of raw interface
-    client = BoilerplateCommandSender(backend)
+    client = QrlCommandSender(backend)
     path: str = "m/44'/238'/0'/0/0"
 
-    # Transaction with 20-byte addresses and descriptor (ML-DSA-87)
-    transaction = bytes.fromhex("02f89201038477359400850ba43b74008261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a0000825544f85bf85994b94f5374fce5edbc8e2a8697c15331677e6ebf0bf842a00000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000183010000")
+    # Transaction with a 48-byte recipient address and descriptor (ML-DSA-87)
+    transaction = bytes.fromhex("02f85201038477359400850ba43b74008261a8b000000000000000000000000000000000000000000000000000000000b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a0000825544c083010000")
 
     with pytest.raises(ExceptionRAPDU) as e:
         with client.sign_tx(path=path, transaction=transaction):

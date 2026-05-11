@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define ADDRESS_LENGTH 20
+#define ADDRESS_LENGTH 48
 #define MAX_FIELD_SIZE 32
 
 typedef struct {

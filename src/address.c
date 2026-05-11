@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Ledger App Boilerplate.
+ *   Ledger App QRL.
  *   (c) 2020 Ledger SAS.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -48,7 +48,12 @@ bool address_from_pubkey(const uint8_t public_key[static 65], uint8_t *out, size
         return false;
     }
 
-    memmove(out, address + sizeof(address) - ADDRESS_LEN, ADDRESS_LEN);
+    if (ADDRESS_LEN >= sizeof(address)) {
+        memset(out, 0, ADDRESS_LEN);
+        memmove(out + ADDRESS_LEN - sizeof(address), address, sizeof(address));
+    } else {
+        memmove(out, address + sizeof(address) - ADDRESS_LEN, ADDRESS_LEN);
+    }
 
     return true;
 }
@@ -78,16 +83,16 @@ cx_err_t address_from_bip32_path(const uint32_t bip32_path[], size_t bip32_path_
 
     uint8_t desc[DESCRIPTOR_BYTES] = {1, 0, 0};  // ML-DSA-87 descriptor
 
-    uint8_t output[32] = {0};
+    uint8_t output[ADDRESS_SIZE] = {0};
     shake256_ctx ctx;
     shake256_init(&ctx);
     shake256_absorb(&ctx, desc, DESCRIPTOR_BYTES);
     shake256_absorb(&ctx, &N_storage.pk, CRYPTO_PUBLIC_KEY_BYTES);
     shake256_finalize(&ctx);
-    shake256_squeeze(&ctx, output, 32);
+    shake256_squeeze(&ctx, output, ADDRESS_SIZE);
     shake256_clear(&ctx);
 
-    // Take first 20 bytes of SHAKE256 output
+    // Take first 48 bytes of SHAKE256 output.
     for(int i = 0; i < ADDRESS_SIZE; i++) {
         address[i] = output[i];
     }
