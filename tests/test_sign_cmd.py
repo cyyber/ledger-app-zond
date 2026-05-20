@@ -33,12 +33,12 @@ def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: Navigat
     #     memo="For u EthDev"
     # ).serialize()
 
-    # Transaction with a 48-byte recipient address.
+    # Transaction with a 64-byte recipient address.
     # RLP: type=02, chain_id=1, nonce=3, gas_tip_cap, gas_fee_cap, gas=25000,
-    #      to=00000000000000000000000000000000000000000000000000000000b94f5374fce5edbc8e2a8697c15331677e6ebf0b,
+    #      to=0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b94f5374fce5edbc8e2a8697c15331677e6ebf0b,
     #      value, data, access_list,
     #      descriptor=[0x01, 0x00, 0x00] (ML-DSA-87)
-    transaction = bytes.fromhex("02f85201038477359400850ba43b74008261a8b000000000000000000000000000000000000000000000000000000000b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a0000825544c083010000")
+    transaction = bytes.fromhex("02f86301038477359400850ba43b74008261a8b8400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a0000825544c083010000")
 
     # Send the sign device instruction.
     # As it requires on-screen validation, the function is asynchronous.
@@ -51,7 +51,7 @@ def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: Navigat
     response = client.get_async_response()
     # _, der_sig, _ = unpack_sign_tx_response(response)
     # assert check_signature_validity(public_key, der_sig, transaction)
-    # Note: Signature will be different due to new transaction data with 48-byte addresses
+    # Note: Signature will be different due to new transaction data with 64-byte addresses
     assert len(response.data) > 0  # Just verify we got a signature
 
 # In this test we send to the device a transaction to trig a blind-signing flow
@@ -92,8 +92,8 @@ def test_sign_tx_refused(backend: BackendInterface, scenario_navigator: Navigate
     client = QrlCommandSender(backend)
     path: str = "m/44'/238'/0'/0/0"
 
-    # Transaction with a 48-byte recipient address and descriptor (ML-DSA-87)
-    transaction = bytes.fromhex("02f85201038477359400850ba43b74008261a8b000000000000000000000000000000000000000000000000000000000b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a0000825544c083010000")
+    # Transaction with a 64-byte recipient address and descriptor (ML-DSA-87)
+    transaction = bytes.fromhex("02f86301038477359400850ba43b74008261a8b8400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a0000825544c083010000")
 
     with pytest.raises(ExceptionRAPDU) as e:
         with client.sign_tx(path=path, transaction=transaction):

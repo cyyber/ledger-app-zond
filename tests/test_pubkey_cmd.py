@@ -36,8 +36,8 @@ def test_get_public_key_confirm_accepted(backend: BackendInterface, scenario_nav
         scenario_navigator.address_review_approve()
 
     response = client.get_async_response().data
-    # Q prefix (0x51) + 48-byte address = 49 bytes total
-    assert len(response) == 49
+    # Q prefix (0x51) + 64-byte address = 65 bytes total
+    assert len(response) == 65
     assert response[0] == ord('Q')
     # To get the exact expected value, run with: pytest -s and check the output
     print(f"Address hex: {response.hex()}")
