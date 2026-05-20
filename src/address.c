@@ -92,7 +92,7 @@ cx_err_t address_from_bip32_path(const uint32_t bip32_path[], size_t bip32_path_
     shake256_squeeze(&ctx, output, ADDRESS_SIZE);
     shake256_clear(&ctx);
 
-    // Take first 48 bytes of SHAKE256 output.
+    // Take first 64 bytes of SHAKE256 output.
     for(int i = 0; i < ADDRESS_SIZE; i++) {
         address[i] = output[i];
     }
