@@ -3,8 +3,9 @@
 #include <stddef.h>  // size_t
 #include <stdint.h>  // uint*_t
 
+#include "address_constants.h"
+
 #define MAX_TX_LEN   510
-#define ADDRESS_LEN  64
 #define MAX_MEMO_LEN 421  // 510 - ADDRESS_LEN - 2*SIZE(U64) - SIZE(MAX_VARINT)
 
 typedef enum {

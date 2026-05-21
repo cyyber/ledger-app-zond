@@ -26,11 +26,6 @@
 #define MAX_TRANSACTION_LEN 510
 
 /**
- * Maximum signature length (bytes).
- */
-#define MAX_DER_SIG_LEN 72
-
-/**
  * Exponent used to convert the smallest unit to QRL when formatting an
  * amount for display (N QRL = N * 10^EXPONENT_SMALLEST_UNIT smallest units).
  *
@@ -42,6 +37,6 @@
 #define EXPONENT_SMALLEST_UNIT 3
 
 /**
- * Prefix byte for Zond addresses.
+ * Prefix byte for QRL addresses.
  */
 #define ZOND_ADDRESS_PREFIX 'Q'

@@ -17,46 +17,17 @@
 
 #include <stdint.h>   // uint*_t
 #include <stddef.h>   // size_t
-#include <stdbool.h>  // bool
 #include <string.h>   // memmove
 
 #include "os.h"
 #include "cx.h"
 #include "crypto_helpers.h"
-#include "ledger_assert.h"
-#include "nbgl_use_case.h"
-
 #include "address.h"
 
-#include "tx_types.h"
 #include "constant.h"
 #include "mldsa87.h"
 #include "shake256.h"
 #include "globals.h"
-#include "utils.h"
-
-bool address_from_pubkey(const uint8_t public_key[static 65], uint8_t *out, size_t out_len) {
-    uint8_t address[32] = {0};
-
-    LEDGER_ASSERT(out != NULL, "NULL out");
-
-    if (out_len < ADDRESS_LEN) {
-        return false;
-    }
-
-    if (cx_keccak_256_hash(public_key + 1, 64, address) != CX_OK) {
-        return false;
-    }
-
-    if (ADDRESS_LEN >= sizeof(address)) {
-        memset(out, 0, ADDRESS_LEN);
-        memmove(out + ADDRESS_LEN - sizeof(address), address, sizeof(address));
-    } else {
-        memmove(out, address + sizeof(address) - ADDRESS_LEN, ADDRESS_LEN);
-    }
-
-    return true;
-}
 
 cx_err_t address_from_bip32_path(const uint32_t bip32_path[], size_t bip32_path_len, uint8_t address[ADDRESS_SIZE]) {
     uint8_t raw_seed[64] = {0};
@@ -75,8 +46,8 @@ cx_err_t address_from_bip32_path(const uint32_t bip32_path[], size_t bip32_path_
         mldsa87_seed[i] = raw_seed[i];
     }
     explicit_bzero(raw_seed, sizeof(raw_seed));
-    nbgl_useCaseSpinner("Getting address");
     ErrorCode mldsa_err = new_mldsa87_from_seed(&mldsa87_seed);
+    explicit_bzero(mldsa87_seed, sizeof(mldsa87_seed));
     if(mldsa_err != ERR_NONE) {
         return CX_INTERNAL_ERROR;
     }

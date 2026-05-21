@@ -1,31 +1,17 @@
-import pytest
-
-from ragger.bip import calculate_public_key_and_chaincode, CurveChoice
-from ragger.error import ExceptionRAPDU
 from ragger.backend.interface import BackendInterface
 from ragger.navigator.navigation_scenario import NavigateWithScenario
 
-from application_client.qrl_command_sender import QrlCommandSender, Errors
+from application_client.qrl_command_sender import QrlCommandSender
 from application_client.qrl_response_unpacker import unpack_get_public_key_response
 
 
-# In this test we check that the GET_PUBLIC_KEY works in non-confirmation mode
-# def test_get_public_key_no_confirm(backend: BackendInterface) -> None:
-#     path_list = [
-#         "m/44'/1'/0'/0/0",
-#         "m/44'/1'/0/0/0",
-#         "m/44'/1'/911'/0/0",
-#         "m/44'/1'/255/255/255",
-#         "m/44'/1'/2147483647/0/0/0/0/0/0/0"
-#     ]
-#     for path in path_list:
-#         client = QrlCommandSender(backend)
-#         response = client.get_public_key(path=path).data
-#         _, public_key, _, chain_code = unpack_get_public_key_response(response)
+def test_get_public_key_no_confirm(backend: BackendInterface) -> None:
+    client = QrlCommandSender(backend)
+    response = client.get_public_key(path="m/44'/238'/0'/0/0").data
+    prefix, address = unpack_get_public_key_response(response)
 
-#         ref_public_key, ref_chain_code = calculate_public_key_and_chaincode(CurveChoice.Secp256k1, path=path)
-#         assert public_key.hex() == ref_public_key
-#         assert chain_code.hex() == ref_chain_code
+    assert prefix == ord('Q')
+    assert len(address) == 64
 
 
 # In this test we check that the GET_PUBLIC_KEY works in confirmation mode
@@ -36,27 +22,7 @@ def test_get_public_key_confirm_accepted(backend: BackendInterface, scenario_nav
         scenario_navigator.address_review_approve()
 
     response = client.get_async_response().data
-    # Q prefix (0x51) + 64-byte address = 65 bytes total
-    assert len(response) == 65
-    assert response[0] == ord('Q')
-    # To get the exact expected value, run with: pytest -s and check the output
-    print(f"Address hex: {response.hex()}")
-    # _, public_key, _, chain_code = unpack_get_public_key_response(response)
+    prefix, address = unpack_get_public_key_response(response)
 
-    # ref_public_key, ref_chain_code = calculate_public_key_and_chaincode(CurveChoice.Secp256k1, path=path)
-    # assert public_key.hex() == ref_public_key
-    # assert chain_code.hex() == ref_chain_code
-
-
-# In this test we check that the GET_PUBLIC_KEY in confirmation mode replies an error if the user refuses
-# def test_get_public_key_confirm_refused(backend: BackendInterface, scenario_navigator: NavigateWithScenario) -> None:
-#     client = QrlCommandSender(backend)
-#     path = "m/44'/1'/0'/0/0"
-
-#     with pytest.raises(ExceptionRAPDU) as e:
-#         with client.get_public_key_with_confirmation(path=path):
-#             scenario_navigator.address_review_reject()
-
-#     # Assert that we have received a refusal
-#     assert e.value.status == Errors.SW_DENY
-#     assert len(e.value.data) == 0
+    assert prefix == ord('Q')
+    assert len(address) == 64

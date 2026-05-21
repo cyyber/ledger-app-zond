@@ -36,9 +36,6 @@ void validate_pubkey(bool choice) {
 }
 
 static int crypto_sign_message(void) {
-    uint32_t info = 0;
-    size_t sig_len = sizeof(G_context.tx_info.signature);
-
     cx_err_t error = 0;
 
     PRINTF("bip32_path_len %d\n", G_context.bip32_path_len);

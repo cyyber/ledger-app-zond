@@ -1,0 +1,5 @@
+#pragma once
+
+#define ADDRESS_SIZE 64
+#define ADDRESS_LEN ADDRESS_SIZE
+#define ADDRESS_LENGTH ADDRESS_SIZE

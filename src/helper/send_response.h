@@ -1,24 +1,12 @@
 #pragma once
 
 #include "os.h"
-#include "macros.h"
 
 /**
- * Length of public key.
- */
-#define PUBKEY_LEN (MEMBER_SIZE(pubkey_ctx_t, raw_public_key))
-/**
- * Length of chain code.
- */
-#define CHAINCODE_LEN (MEMBER_SIZE(pubkey_ctx_t, chain_code))
-
-/**
- * Helper to send APDU response with public key and chain code.
+ * Helper to send APDU response with the prefixed QRL address.
  *
- * response = PUBKEY_LEN (1) ||
- *            G_context.pk_info.public_key (PUBKEY_LEN) ||
- *            CHAINCODE_LEN (1) ||
- *            G_context.pk_info.chain_code (CHAINCODE_LEN)
+ * response = 'Q' (1) ||
+ *            G_context.address (64)
  *
  * @return zero or positive integer if success, -1 otherwise.
  *
@@ -29,9 +17,7 @@ int helper_send_response_address(void);
  * Helper to send APDU response with signature and v (parity of
  * y-coordinate of R).
  *
- * response = G_context.tx_info.signature_len (1) ||
- *            G_context.tx_info.signature (G_context.tx_info.signature_len) ||
- *            G_context.tx_info.v (1)
+ * response = N_storage.sig chunk
  *
  * @return zero or positive integer if success, -1 otherwise.
  *
