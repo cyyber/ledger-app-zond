@@ -33,4 +33,4 @@ const int32_t ZETAS[N] = {
     3937738,  1400424,  -846154,  1976782,
 };
 
-const uint8_t CTX[CTX_LEN] = {'Z', 'O', 'N', 'D'};
+const uint8_t CTX[CTX_LEN] = {'Z', 'O', 'N', 'D', 0x01, 0x01, 0x00, 0x00};

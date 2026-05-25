@@ -49,7 +49,7 @@
 #define POLY_VEC_H_PACKED_BYTES (OMEGA + K)
 #define POLY_W1_PACKED_BYTES    128
 
-#define CTX_LEN 4
+#define CTX_LEN 8
 #define MESSAGE_LEN 500
 
 #define SIGNATURE_CHUNK_SIZE 258
@@ -60,6 +60,6 @@
 #define PK_CHUNKS 11
 
 extern const int ZETAS[N];
-extern const uint8_t CTX[4];
+extern const uint8_t CTX[CTX_LEN];
 
 #endif
