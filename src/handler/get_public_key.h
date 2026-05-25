@@ -10,10 +10,7 @@
 
 /**
  * Handler for GET_PUBLIC_KEY command. If successfully parse BIP32 path,
- * derive public key/chain code and send APDU response.
- *
- * @see G_context.bip32_path, G_context.pk_info.raw_public_key and
- *      G_context.pk_info.chain_code.
+ * derive the ML-DSA-87 address and send APDU response.
  *
  * @param[in,out] cdata
  *   Command data with BIP32 path.

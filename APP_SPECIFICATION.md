@@ -47,7 +47,14 @@ The address can be verified on the device before being returned.
 | Description                                                      | Length |
 | ---                                                              | ---    |
 | Prefix (`Q`)                                                     | 1      |
-| Address                                                          | 20     |
+| Address (post-quantum, ML-DSA-87 derived via SHAKE-256)          | 64     |
+
+Total response: 65 bytes. The address is the first 64 bytes of
+`SHAKE-256(descriptor || public_key)`, where `descriptor = [0x01, 0x00, 0x00]`
+for ML-DSA-87 and `public_key` is the 2592-byte ML-DSA-87 verification key.
+String form is `Q` + 128 lowercase hex characters. The full public key
+is not returned in P2=0; use P2=1..10 to fetch the 11-chunk public key
+(10 × 258 bytes + 1 × 12 bytes = 2592 bytes).
 
 ### SIGN Zond TRANSACTION
 

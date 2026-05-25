@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Ledger App Boilerplate.
+ *   Ledger App QRL.
  *   (c) 2020 Ledger SAS.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +25,7 @@
 #include "io.h"
 #include "buffer.h"
 #include "crypto_helpers.h"
+#include "nbgl_use_case.h"
 
 #include "get_public_key.h"
 #include "globals.h"
@@ -44,6 +45,7 @@ int handler_get_public_key(buffer_t *cdata, bool display) {
         return io_send_sw(SW_WRONG_DATA_LENGTH);
     }
 
+    nbgl_useCaseSpinner("Getting address");
     cx_err_t error = address_from_bip32_path(G_context.bip32_path,
                                                   G_context.bip32_path_len,
                                                   G_context.address);

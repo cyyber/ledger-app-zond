@@ -73,7 +73,7 @@ void print_tx(zond_tx_t tx) {
     PRINTF("\n");
 
     PRINTF("To: 0x");
-    for (int i = 0; i < 24; i++) PRINTF("%02x", tx.to[i]);
+    for (int i = 0; i < ADDRESS_LENGTH; i++) PRINTF("%02x", tx.to[i]);
     PRINTF("\n");
 
     PRINTF("Value: 0x");

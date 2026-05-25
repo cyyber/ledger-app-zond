@@ -1,5 +1,5 @@
 # ****************************************************************************
-#    Ledger App Boilerplate
+#    QRL Ledger App
 #    (c) 2023 Ledger SAS.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,12 +23,12 @@ endif
 #        Mandatory configuration       #
 ########################################
 # Application name
-APPNAME = "Boilerplate"
+APPNAME = "QRL"
 
 # Application version
-APPVERSION_M = 2
-APPVERSION_N = 2
-APPVERSION_P = 2
+APPVERSION_M = 3
+APPVERSION_N = 0
+APPVERSION_P = 0
 APPVERSION = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 # Application source files
@@ -69,7 +69,7 @@ PATH_APP_LOAD_PARAMS = "44'/238'"   # purpose=coin(44) / coin_type=Testnet(1)
 #   * It must at least contains one value.
 #   * Values can be the app ticker or anything else but should be unique.
 VARIANT_PARAM = COIN
-VARIANT_VALUES = BOL
+VARIANT_VALUES = QRL
 
 # Enabling DEBUG flag will enable PRINTF and disable optimizations
 #DEBUG = 1
@@ -100,9 +100,9 @@ ENABLE_NBGL_QRCODE = 1
 ########################################
 #       SWAP FEATURE FLAG      		   #
 # This flag enables the swap feature   #
-# in the Boiler application.           #
+# in the QRL application.              #
 ########################################
-ifeq ($(APPNAME), "Boilerplate")
+ifeq ($(APPNAME), "QRL")
 ENABLE_TESTING_SWAP = 1
 endif
 

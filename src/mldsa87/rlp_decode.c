@@ -238,6 +238,18 @@ int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx) {
     tx->descriptor_len = val_len;
     p += consumed; remaining -= consumed;
 
+    // 11. extraParams (post-migration: present in EIP-1559 message-to-sign
+    //                  emitted by web3-qrl-accounts; usually empty). The whole
+    //                  raw tx is hashed for signing above this function, so we
+    //                  just consume the field to keep RLP length accounting
+    //                  in sync; we don't need to store it for the UI.
+    consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
+    if (consumed < 0) {
+        PRINTF("Invalid extraParams field\n");
+        return -1;
+    }
+    p += consumed; remaining -= consumed;
+
     if (p != payload_end) {
         PRINTF("Payload length mismatch\n");
         return -1;

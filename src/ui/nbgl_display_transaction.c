@@ -1,5 +1,5 @@
 /*****************************************************************************
- *   Ledger App Boilerplate.
+ *   Ledger App QRL.
  *   (c) 2020 Ledger SAS.
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,9 +37,9 @@
 #include "address.h"
 #include "utils.h"
 
-static char g_from_address[50];
+static char g_from_address[1 + ADDRESS_SIZE * 2 + 1];
 static char g_amount[30];
-static char g_to_address[50];
+static char g_to_address[1 + ADDRESS_LENGTH * 2 + 1];
 static char g_max_fees[30];
 // static char dec[10];
 
@@ -171,7 +171,7 @@ void print_tx_utils(zond_tx_t *tx) {
     PRINTF("\n");
 
     PRINTF("To: 0x");
-    for (int i = 0; i < 24; i++) PRINTF("%02x", tx->to[i]);
+    for (int i = 0; i < ADDRESS_LENGTH; i++) PRINTF("%02x", tx->to[i]);
     PRINTF("\n");
 
     PRINTF("Value: 0x");
@@ -271,7 +271,7 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
         // Start blind-signing review flow
         nbgl_useCaseReviewBlindSigning(TYPE_TRANSACTION,
                                        &pairList,
-                                       &ICON_APP_BOILERPLATE,
+                                       &ICON_APP_QRL,
                                        "Review transaction\n",
                                        NULL,
 #ifdef SCREEN_SIZE_WALLET
@@ -285,7 +285,7 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
         // Start review flow
         nbgl_useCaseReview(TYPE_TRANSACTION,
                            &pairList,
-                           &ICON_APP_BOILERPLATE,
+                           &ICON_APP_QRL,
                            "Review transaction\n",
                            NULL,
 #ifdef SCREEN_SIZE_WALLET

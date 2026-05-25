@@ -59,33 +59,24 @@ void swap_handle_check_address(check_address_parameters_t *params) {
 
     uint8_t bip32_path_len;
     uint32_t bip32_path[MAX_BIP32_PATH];
-    pubkey_ctx_t pk_info = {0};
-
     buffer_read_u8(&buf, &bip32_path_len);
     buffer_read_bip32_path(&buf, bip32_path, (size_t) bip32_path_len);
 
-    cx_err_t ret = bip32_derive_get_pubkey_256(CX_CURVE_256K1,
-                                               bip32_path,
-                                               bip32_path_len,
-                                               pk_info.raw_public_key,
-                                               pk_info.chain_code,
-                                               CX_SHA512);
+    uint8_t address[ADDRESS_LEN] = {0};
+    cx_err_t ret = address_from_bip32_path(bip32_path, bip32_path_len, address);
     if (ret != CX_OK) {
-        PRINTF("Failed to derive public key\n");
+        PRINTF("Failed to derive address\n");
         return;
     }
 
-    uint8_t address[ADDRESS_LEN] = {0};
-    address_from_pubkey(pk_info.raw_public_key, address, sizeof(address));
-
-    char derived_address[41];
+    char derived_address[ADDRESS_LEN * 2 + 1];
     memset(derived_address, 0, sizeof(derived_address));
     format_hex(address, sizeof(address), derived_address, sizeof(derived_address));
     PRINTF("Derived address %s\n", derived_address);
 
     PRINTF("Checked address %s\n", params->address_to_check);
 
-    if (strncmp(derived_address, params->address_to_check, sizeof(derived_address)) != 0) {
+    if (strncmp(derived_address, params->address_to_check, ADDRESS_LEN * 2) != 0) {
         PRINTF("Addresses do not match\n");
     } else {
         PRINTF("Addresses match\n");

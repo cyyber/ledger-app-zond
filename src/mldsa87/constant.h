@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "address_constants.h"
+
 #define CRYPTO_PUBLIC_KEY_BYTES (SEED_BYTES + K * POLY_T1_PACKED_BYTES)
 #define CRYPTO_SECRET_KEY_BYTES                                                          \
     (2 * SEED_BYTES + TR_BYTES + L * POLY_ETA_PACKED_BYTES + K * POLY_ETA_PACKED_BYTES + \
@@ -19,7 +21,6 @@
 #define POLY_UNIFORM_GAMMA1_N_BLOCKS \
     ((POLY_Z_PACKED_BYTES + STREAM_256_BLOCK_BYTES - 1) / STREAM_256_BLOCK_BYTES)
 
-#define ADDRESS_SIZE 20
 #define DESCRIPTOR_BYTES 3
 #define SEED_BYTES 32
 #define CRH_BYTES  64  // hash of public key
@@ -48,7 +49,7 @@
 #define POLY_VEC_H_PACKED_BYTES (OMEGA + K)
 #define POLY_W1_PACKED_BYTES    128
 
-#define CTX_LEN 4
+#define CTX_LEN 8
 #define MESSAGE_LEN 500
 
 #define SIGNATURE_CHUNK_SIZE 258
@@ -59,6 +60,6 @@
 #define PK_CHUNKS 11
 
 extern const int ZETAS[N];
-extern const uint8_t CTX[4];
+extern const uint8_t CTX[CTX_LEN];
 
 #endif
