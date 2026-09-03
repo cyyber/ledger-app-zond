@@ -56,6 +56,6 @@ jobs:
         with:
           files: ./unit-tests/coverage.info
           flags: unittests
-          name: codecov-app-boilerplate
-          fail_ci_if_error: true
+          name: codecov-qrl-v2-ledger
+          fail_ci_if_error: false  # set true once CODECOV_TOKEN secret is configured
           verbose: true

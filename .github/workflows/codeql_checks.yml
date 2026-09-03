@@ -13,6 +13,11 @@ on:
       - '.github/workflows/*.yml'
       - 'tests/*'
 
+permissions:
+  contents: read
+  actions: read
+  security-events: write  # required to upload SARIF results
+
 jobs:
   analyse:
     name: Analyse
