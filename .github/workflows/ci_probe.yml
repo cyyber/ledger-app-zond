@@ -1,6 +1,0 @@
-name: CI probe
-on:
-  workflow_dispatch:
-jobs:
-  local_reusable:
-    uses: ./.github/workflows/_ci_probe_called.yml
