@@ -1,15 +1,37 @@
 import pytest
 
+from Crypto.Hash import keccak
+from dilithium_py.ml_dsa import ML_DSA_87
 from ragger.backend.interface import BackendInterface
 from ragger.error import ExceptionRAPDU
 from ragger.navigator.navigation_scenario import NavigateWithScenario
 
-from application_client.boilerplate_transaction import Transaction
-from application_client.boilerplate_command_sender import BoilerplateCommandSender, Errors
-from application_client.boilerplate_response_unpacker import unpack_get_public_key_response, unpack_sign_tx_response
-from utils import check_signature_validity
+from application_client.boilerplate_command_sender import BoilerplateCommandSender, CLA, InsType, Errors
 
 # In this tests we check the behavior of the device when asked to sign a transaction
+
+# ML-DSA-87 signing context: "ZOND" || version 0x01 || descriptor 01 00 00
+SIGNING_CONTEXT = bytes.fromhex("5a4f4e4401010000")
+PK_LEN = 2592
+SIG_LEN = 4627
+
+
+def get_public_key_chunks(backend: BackendInterface) -> bytes:
+    """Fetch the 2,592-byte ML-DSA-87 public key via chunked GET_PUBLIC_KEY."""
+    pk = b""
+    for p2 in range(1, 12):
+        r = backend.exchange(cla=CLA, ins=InsType.GET_PUBLIC_KEY, p1=0, p2=p2)
+        pk += r.data
+    return pk[:PK_LEN]
+
+
+def get_signature_chunks(backend: BackendInterface, first_chunk: bytes) -> bytes:
+    """Collect the remaining signature chunks after the auto-returned first."""
+    sig = bytearray(first_chunk)
+    for p2 in range(1, 18):
+        r = backend.exchange(cla=CLA, ins=InsType.SIGN_TX, p1=2, p2=p2)
+        sig += r.data
+    return bytes(sig)[:SIG_LEN]
 
 
 # In this test we send to the device a transaction to sign and validate it on screen
@@ -21,23 +43,15 @@ def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: Navigat
     # The path used for this entire test
     path: str = "m/44'/238'/0'/0/0"
 
-    # First we need to get the public key of the device in order to build the transaction
-    # rapdu = client.get_public_key(path=path)
-    # _, public_key, _, _ = unpack_get_public_key_response(rapdu.data)
+    # Derive the key on-device and fetch the public key for verification
+    client.get_public_key(path=path)
+    public_key = get_public_key_chunks(backend)
 
-    # Create the transaction that will be sent to the device for signing
-    # transaction = Transaction(
-    #     nonce=1,
-    #     to="0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae",
-    #     value=666,
-    #     memo="For u EthDev"
-    # ).serialize()
-
-    # Transaction with 20-byte addresses (updated from 24-byte)
+    # Unsigned go-qrl sighash preimage (11 RLP fields)
     # RLP: type=02, chain_id=1, nonce=3, gas_tip_cap, gas_fee_cap, gas=25000,
-    #      to=b94f5374fce5edbc8e2a8697c15331677e6ebf0b (20 bytes), value, data, access_list,
-    #      descriptor=[0x01, 0x00, 0x00] (ML-DSA-87)
-    transaction = bytes.fromhex("02f89201038477359400850ba43b74008261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a0000825544f85bf85994b94f5374fce5edbc8e2a8697c15331677e6ebf0bf842a00000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000183010000")
+    #      to=b94f...aaaa (64 bytes), value, data, access_list=empty,
+    #      descriptor=[0x01, 0x00, 0x00] (ML-DSA-87), extra_params=empty
+    transaction = bytes.fromhex("02f86401038477359400850ba43b74008261a8b840b94f5374fce5edbc8e2a8697c15331677e6ebf0baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa88016345785d8a0000825544c08301000080")
 
     # Send the sign device instruction.
     # As it requires on-screen validation, the function is asynchronous.
@@ -46,12 +60,14 @@ def test_sign_tx_short_tx(backend: BackendInterface, scenario_navigator: Navigat
         # Validate the on-screen request by performing the navigation appropriate for this device
         scenario_navigator.review_approve()
 
-    # The device as yielded the result, parse it and ensure that the signature is correct
-    response = client.get_async_response()
-    # _, der_sig, _ = unpack_sign_tx_response(response)
-    # assert check_signature_validity(public_key, der_sig, transaction)
-    # Note: Signature will be different due to new transaction data with 20-byte addresses
-    assert len(response.data) > 0  # Just verify we got a signature
+    # Collect the full detached signature and verify it independently:
+    # the device signs keccak256(preimage) under the fixed 8-byte context.
+    signature = get_signature_chunks(backend, client.get_async_response().data)
+    assert len(signature) == SIG_LEN
+    sighash = keccak.new(digest_bits=256, data=transaction).digest()
+    assert ML_DSA_87.verify(public_key, sighash, signature, ctx=SIGNING_CONTEXT)
+    # Tampered message must not verify
+    assert not ML_DSA_87.verify(public_key, b"\x00" * 32, signature, ctx=SIGNING_CONTEXT)
 
 # In this test we send to the device a transaction to trig a blind-signing flow
 # The transaction is short and will be sent in one chunk
@@ -91,8 +107,8 @@ def test_sign_tx_refused(backend: BackendInterface, scenario_navigator: Navigate
     client = BoilerplateCommandSender(backend)
     path: str = "m/44'/238'/0'/0/0"
 
-    # Transaction with 20-byte addresses and descriptor (ML-DSA-87)
-    transaction = bytes.fromhex("02f89201038477359400850ba43b74008261a894b94f5374fce5edbc8e2a8697c15331677e6ebf0b88016345785d8a0000825544f85bf85994b94f5374fce5edbc8e2a8697c15331677e6ebf0bf842a00000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000183010000")
+    # Unsigned go-qrl sighash preimage with 64-byte recipient
+    transaction = bytes.fromhex("02f86401038477359400850ba43b74008261a8b840b94f5374fce5edbc8e2a8697c15331677e6ebf0baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa88016345785d8a0000825544c08301000080")
 
     with pytest.raises(ExceptionRAPDU) as e:
         with client.sign_tx(path=path, transaction=transaction):

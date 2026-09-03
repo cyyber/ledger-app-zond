@@ -27,6 +27,11 @@ on:
       - develop
   pull_request:
 
+permissions:
+  contents: write       # required by reusable_ragger_tests' snapshot-PR flow
+  actions: write        # required by the reusable workflows' artifact handling
+  pull-requests: write  # required by reusable_build's diff_elf_sizes job
+
 jobs:
   build_application:
     name: Build application using the reusable workflow

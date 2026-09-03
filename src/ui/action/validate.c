@@ -36,27 +36,34 @@ void validate_pubkey(bool choice) {
 }
 
 static int crypto_sign_message(void) {
-    uint32_t info = 0;
-    size_t sig_len = sizeof(G_context.tx_info.signature);
-
     cx_err_t error = 0;
 
     PRINTF("bip32_path_len %d\n", G_context.bip32_path_len);
     PRINTF("raw_tx_len %d\n", G_context.tx_info.raw_tx_len);
     PRINTF("SIGNING START\n");
     error = crypto_sign_optimized(G_context.bip32_path,
-                                G_context.bip32_path_len,
-                                G_context.tx_info.m_hash, 32);
+                                  G_context.bip32_path_len,
+                                  G_context.tx_info.m_hash,
+                                  32);
     PRINTF("SIGNING END\n");
+    if (error != CX_OK) {
+        wipe_nvm_secrets();
+        return -1;
+    }
     PRINTF("bip32_path_len %d\n", G_context.bip32_path_len);
     PRINTF("raw_tx_len %d\n", G_context.tx_info.raw_tx_len);
     PRINTF("VERIFY START\n");
     bool is_verified = false;
     error = crypto_verify_optimized(G_context.bip32_path,
-                                G_context.bip32_path_len, N_storage.sig, CRYPTO_BYTES,
-                                G_context.tx_info.m_hash, 32, &is_verified);
+                                    G_context.bip32_path_len,
+                                    (uint8_t *) N_storage.sig,
+                                    CRYPTO_BYTES,
+                                    G_context.tx_info.m_hash,
+                                    32,
+                                    &is_verified);
     PRINTF("VERIFY END\n");
-    if(is_verified) {
+    wipe_nvm_secrets();
+    if (is_verified) {
         PRINTF("SIGNATURE CORRECT\n");
     } else {
         PRINTF("SIGNATURE WRONG\n");
@@ -65,7 +72,7 @@ static int crypto_sign_message(void) {
     //     PRINTF("%02x", N_storage.sig[i]);
     // }
     // PRINTF("\n");
-                                                      
+
     if (error != CX_OK || !is_verified) {
         return -1;
     }

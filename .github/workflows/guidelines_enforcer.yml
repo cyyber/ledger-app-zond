@@ -17,7 +17,14 @@ on:
       - develop
   pull_request:
 
+permissions:
+  contents: read
+  actions: write        # required by the reusable workflows' artifact handling
+  pull-requests: write  # required by reusable_build's diff_elf_sizes job
+
 jobs:
   guidelines_enforcer:
     name: Call Ledger guidelines_enforcer
     uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_guidelines_enforcer.yml@v1
+    secrets:
+      git_token: ${{ secrets.GITHUB_TOKEN }}

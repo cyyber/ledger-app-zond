@@ -28,68 +28,88 @@
 
 #include "address.h"
 
-#include "tx_types.h"
 #include "constant.h"
 #include "mldsa87.h"
 #include "shake256.h"
 #include "globals.h"
-#include "utils.h"
 
-bool address_from_pubkey(const uint8_t public_key[static 65], uint8_t *out, size_t out_len) {
-    uint8_t address[32] = {0};
-
-    LEDGER_ASSERT(out != NULL, "NULL out");
-
-    if (out_len < ADDRESS_LEN) {
+bool is_valid_zond_bip32_path(const uint32_t bip32_path[], size_t bip32_path_len) {
+    if (bip32_path_len != 5) {
         return false;
     }
-
-    if (cx_keccak_256_hash(public_key + 1, 64, address) != CX_OK) {
+    if (bip32_path[0] != 0x8000002Cu ||  // purpose 44'
+        bip32_path[1] != 0x800000EEu ||  // coin type 238'
+        (bip32_path[2] & 0x80000000u) == 0 || (bip32_path[3] & 0x80000000u) != 0 ||
+        (bip32_path[4] & 0x80000000u) != 0) {
         return false;
     }
-
-    memmove(out, address + sizeof(address) - ADDRESS_LEN, ADDRESS_LEN);
-
     return true;
 }
 
-cx_err_t address_from_bip32_path(const uint32_t bip32_path[], size_t bip32_path_len, uint8_t address[ADDRESS_SIZE]) {
+cx_err_t address_from_bip32_path(const uint32_t bip32_path[],
+                                 size_t bip32_path_len,
+                                 uint8_t address[ADDRESS_SIZE]) {
     uint8_t raw_seed[64] = {0};
-    cx_err_t err = os_derive_bip32_no_throw(
-        CX_CURVE_SECP256K1,
-        bip32_path,
-        bip32_path_len,
-        raw_seed,
-        NULL
-    );
-    if(err != CX_OK) {
+    cx_err_t err =
+        os_derive_bip32_no_throw(CX_CURVE_SECP256K1, bip32_path, bip32_path_len, raw_seed, NULL);
+    if (err != CX_OK) {
         return err;
     }
     uint8_t mldsa87_seed[32] = {0};
-    for(int i = 0; i < 32; i++) {
+    for (int i = 0; i < 32; i++) {
         mldsa87_seed[i] = raw_seed[i];
     }
     explicit_bzero(raw_seed, sizeof(raw_seed));
     nbgl_useCaseSpinner("Getting address");
     ErrorCode mldsa_err = new_mldsa87_from_seed(&mldsa87_seed);
-    if(mldsa_err != ERR_NONE) {
+    if (mldsa_err != ERR_NONE) {
         return CX_INTERNAL_ERROR;
     }
 
     uint8_t desc[DESCRIPTOR_BYTES] = {1, 0, 0};  // ML-DSA-87 descriptor
 
-    uint8_t output[32] = {0};
+    // address = SHAKE256_XOF(descriptor || pk, 64)
     shake256_ctx ctx;
     shake256_init(&ctx);
     shake256_absorb(&ctx, desc, DESCRIPTOR_BYTES);
-    shake256_absorb(&ctx, &N_storage.pk, CRYPTO_PUBLIC_KEY_BYTES);
+    shake256_absorb(&ctx, (const uint8_t *) N_storage.pk, CRYPTO_PUBLIC_KEY_BYTES);
     shake256_finalize(&ctx);
-    shake256_squeeze(&ctx, output, 32);
+    shake256_squeeze(&ctx, address, ADDRESS_SIZE);
+    shake256_clear(&ctx);
+    return 0;
+}
+
+// EIP-55-style checksum casing with SHAKE-256 over the 128-char lowercase hex
+// body (the 'Q' prefix is not hashed). out must hold 1 + 2*ADDRESS_SIZE + 1.
+bool format_checksummed_address(const uint8_t address[ADDRESS_SIZE], char *out, size_t out_len) {
+    static const char hexc[] = "0123456789abcdef";
+
+    if (out == NULL || out_len < 1 + 2 * ADDRESS_SIZE + 1) {
+        return false;
+    }
+
+    char *body = out + 1;
+    for (int i = 0; i < ADDRESS_SIZE; i++) {
+        body[2 * i] = hexc[address[i] >> 4];
+        body[2 * i + 1] = hexc[address[i] & 0x0f];
+    }
+
+    uint8_t mask[ADDRESS_SIZE] = {0};
+    shake256_ctx ctx;
+    shake256_init(&ctx);
+    shake256_absorb(&ctx, (const uint8_t *) body, 2 * ADDRESS_SIZE);
+    shake256_finalize(&ctx);
+    shake256_squeeze(&ctx, mask, ADDRESS_SIZE);
     shake256_clear(&ctx);
 
-    // Take first 20 bytes of SHAKE256 output
-    for(int i = 0; i < ADDRESS_SIZE; i++) {
-        address[i] = output[i];
+    for (int i = 0; i < 2 * ADDRESS_SIZE; i++) {
+        uint8_t nibble = (i % 2 == 0) ? (mask[i / 2] >> 4) : (mask[i / 2] & 0x0f);
+        if (body[i] >= 'a' && body[i] <= 'f' && nibble >= 8) {
+            body[i] -= 'a' - 'A';
+        }
     }
-    return 0;
+
+    out[0] = 'Q';
+    out[1 + 2 * ADDRESS_SIZE] = '\0';
+    return true;
 }

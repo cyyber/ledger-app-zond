@@ -1,7 +1,7 @@
 # project information
 project(TxParser
         VERSION 1.0
-        DESCRIPTION "Transaction parser of Boilerplate app"
+        DESCRIPTION "Transaction parser of the QRL v2.0 Ledger app"
         LANGUAGES C)
 
 # specify C standard
@@ -12,20 +12,12 @@ set(CMAKE_C_FLAGS_DEBUG
 )
 
 add_library(txparser
-    ${BOLOS_SDK}/lib_standard_app/format.c
-    ${BOLOS_SDK}/lib_standard_app/buffer.c
-    ${BOLOS_SDK}/lib_standard_app/read.c
-    ${BOLOS_SDK}/lib_standard_app/varint.c
-    ${BOLOS_SDK}/lib_standard_app/bip32.c
-    ${BOLOS_SDK}/lib_standard_app/write.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/transaction/utils.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/transaction/deserialize.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/mldsa87/rlp_decode.c
 )
 
 set_target_properties(txparser PROPERTIES SOVERSION 1)
 
 target_include_directories(txparser PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/transaction
-    ${BOLOS_SDK}/lib_standard_app
+    ${CMAKE_CURRENT_SOURCE_DIR}/../unit-tests/stubs
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/mldsa87
 )

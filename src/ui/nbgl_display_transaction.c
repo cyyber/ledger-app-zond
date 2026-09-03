@@ -32,14 +32,12 @@
 #include "sw.h"
 #include "address.h"
 #include "validate.h"
-#include "tx_types.h"
 #include "menu.h"
 #include "address.h"
-#include "utils.h"
 
-static char g_from_address[50];
+static char g_from_address[1 + ADDRESS_SIZE * 2 + 1];
 static char g_amount[30];
-static char g_to_address[50];
+static char g_to_address[1 + ADDRESS_SIZE * 2 + 1];
 static char g_max_fees[30];
 // static char dec[10];
 
@@ -47,7 +45,7 @@ static nbgl_contentTagValue_t pairs[4];
 static nbgl_contentTagValueList_t pairList;
 
 #define MAX_DECIMAL_DIGITS 40
-#define MAX_RESULT_LEN 50
+#define MAX_RESULT_LEN     50
 
 static void uint8_array_to_decimal(const uint8_t *bytes, size_t len, char *out) {
     uint8_t temp[32] = {0};  // Ensure full zero-init
@@ -65,8 +63,7 @@ static void uint8_array_to_decimal(const uint8_t *bytes, size_t len, char *out) 
             int val = (remainder << 8) | temp[i];
             temp[i] = val / 10;
             remainder = val % 10;
-            if (temp[i] != 0)
-                is_zero = 0;
+            if (temp[i] != 0) is_zero = 0;
         }
 
         result[--result_index] = '0' + remainder;
@@ -79,52 +76,59 @@ static void uint8_array_to_decimal(const uint8_t *bytes, size_t len, char *out) 
 }
 
 // Inserts decimal point `decimals` from the right, trims trailing zeros
-static void format_with_decimals(const char *raw, int decimals, char *out) {
+static void format_with_decimals(const char *raw, size_t decimals, char *out, size_t out_len) {
     size_t len = strlen(raw);
+    char buffer[MAX_RESULT_LEN] = {0};
+    size_t pos = 0;
 
     if (decimals == 0) {
-        strcpy(out, raw);
+        snprintf(out, out_len, "%s", raw);
         return;
     }
 
-    char buffer[MAX_RESULT_LEN];
-    char *dot = buffer;
-
     if (len <= decimals) {
-        strcpy(buffer, "0.");
-        dot += 2;
-        for (int i = 0; i < decimals - len; i++)
-            *dot++ = '0';
-        strcpy(dot, raw);
+        buffer[pos++] = '0';
+        buffer[pos++] = '.';
+        for (size_t i = 0; i < decimals - len && pos < MAX_RESULT_LEN - 1; i++) {
+            buffer[pos++] = '0';
+        }
+        for (size_t i = 0; i < len && pos < MAX_RESULT_LEN - 1; i++) {
+            buffer[pos++] = raw[i];
+        }
     } else {
         size_t int_part = len - decimals;
-        strncpy(buffer, raw, int_part);
-        buffer[int_part] = '.';
-        strcpy(buffer + int_part + 1, raw + int_part);
+        for (size_t i = 0; i < int_part && pos < MAX_RESULT_LEN - 1; i++) {
+            buffer[pos++] = raw[i];
+        }
+        if (pos < MAX_RESULT_LEN - 1) {
+            buffer[pos++] = '.';
+        }
+        for (size_t i = int_part; i < len && pos < MAX_RESULT_LEN - 1; i++) {
+            buffer[pos++] = raw[i];
+        }
     }
+    buffer[pos] = '\0';
 
     // Trim trailing zeros
     char *end = buffer + strlen(buffer) - 1;
     while (*end == '0' && end > buffer) {
         *end-- = '\0';
     }
-    if (*end == '.') *end = '\0';  // remove dot if nothing after
+    if (*end == '.') {
+        *end = '\0';  // remove dot if nothing after
+    }
 
-    strcpy(out, buffer);
+    snprintf(out, out_len, "%s", buffer);
 }
 
-// Wrapper: amount in wei to ETH
-static void convert_amount_to_eth(const uint8_t *amount, size_t len, char *out_str) {
+// Wrapper: amount in wei to QRL units
+static void convert_amount_to_eth(const uint8_t *amount,
+                                  size_t len,
+                                  char *out_str,
+                                  size_t out_len) {
     char dec[MAX_RESULT_LEN];
     uint8_array_to_decimal(amount, len, dec);
-    format_with_decimals(dec, 18, out_str);
-}
-
-// Wrapper: fees in wei to Gwei
-static void convert_fees_to_gwei(const uint8_t *fees, size_t len, char *out_str) {
-    char dec[MAX_RESULT_LEN];
-    uint8_array_to_decimal(fees, len, dec);
-    format_with_decimals(dec, 9, out_str);
+    format_with_decimals(dec, 18, out_str, out_len);
 }
 
 // called when long press button on 3rd page is long-touched or when reject footer is touched
@@ -139,16 +143,7 @@ static void review_choice(bool confirm) {
     }
 }
 
-static void bytes_to_hex_string(uint8_t *byte, size_t byte_len, char *str) {
-    const char hex_chars[] = "0123456789abcdef";
-
-    for(int i = 0; i < byte_len; i++) {
-        str[0 + i*2] = hex_chars[(byte[i] >> 4) & 0x0F];
-        str[1 + i*2] = hex_chars[byte[i] & 0x0F];
-    }
-}
-
-void print_tx_utils(zond_tx_t *tx) { 
+void print_tx_utils(zond_tx_t *tx) {
     PRINTF("======== ZOND TX ========\n");
     PRINTF("Chain ID: 0x");
     for (int i = 0; i < tx->chain_id_len; i++) PRINTF("%02x", tx->chain_id[i]);
@@ -171,7 +166,7 @@ void print_tx_utils(zond_tx_t *tx) {
     PRINTF("\n");
 
     PRINTF("To: 0x");
-    for (int i = 0; i < 24; i++) PRINTF("%02x", tx->to[i]);
+    for (int i = 0; i < ADDRESS_LENGTH; i++) PRINTF("%02x", tx->to[i]);
     PRINTF("\n");
 
     PRINTF("Value: 0x");
@@ -195,12 +190,14 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
 
     PRINTF("DERIVE ADDRESS START\n");
     nbgl_useCaseSpinner("Getting address");
-    cx_err_t error = address_from_bip32_path(G_context.bip32_path,
-                                                  G_context.bip32_path_len,
-                                                  G_context.address);
+    cx_err_t error =
+        address_from_bip32_path(G_context.bip32_path, G_context.bip32_path_len, G_context.address);
+    if (error != CX_OK) {
+        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
+    }
     PRINTF("DERIVE ADDRESS END\n");
     PRINTF("from ");
-    for(int i = 0; i < ADDRESS_SIZE; i++) {
+    for (int i = 0; i < ADDRESS_SIZE; i++) {
         PRINTF("%02x", G_context.address[i]);
     }
     PRINTF("\n");
@@ -217,33 +214,31 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
     // memset(g_tx_hash, 0, sizeof(g_tx_hash));
     // snprintf(g_amount, sizeof(g_amount), "QRL %.*s", sizeof(amount), amount);
 
-    //Format from address
+    // Format from address
     memset(g_from_address, 0, sizeof(g_from_address));
-    char from_str[ADDRESS_SIZE*2+1] = {0}; 
-    bytes_to_hex_string(G_context.address, ADDRESS_SIZE, from_str);
-    strncpy(g_from_address + 1, from_str, sizeof(g_from_address)-1);
-    g_from_address[0] = ZOND_ADDRESS_PREFIX;
+    if (!format_checksummed_address(G_context.address, g_from_address, sizeof(g_from_address))) {
+        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
+    }
 
     // Format amount
     char amount[30] = {0};
     memset(amount, 0, sizeof(amount));
-    convert_amount_to_eth(tx->value, tx->value_len, amount);
+    convert_amount_to_eth(tx->value, tx->value_len, amount, sizeof(amount));
     PRINTF("amount %s\n", amount);
     memset(g_amount, 0, sizeof(g_amount));
     snprintf(g_amount, sizeof(g_amount), "QRL %.*s", sizeof(amount), amount);
 
-    //Format to address
+    // Format to address
     memset(g_to_address, 0, sizeof(g_to_address));
-    char to_str[ADDRESS_LENGTH*2+1] = {0}; 
-    bytes_to_hex_string(tx->to, ADDRESS_LENGTH, to_str);
-    PRINTF("to %s\n", to_str);
-    strncpy(g_to_address + 1, to_str, sizeof(g_to_address)-1);
-    g_to_address[0] = ZOND_ADDRESS_PREFIX;
+    if (!format_checksummed_address(tx->to, g_to_address, sizeof(g_to_address))) {
+        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
+    }
+    PRINTF("to %s\n", g_to_address);
 
     // Format max_fees
     char max_fees[30] = {0};
     memset(max_fees, 0, sizeof(max_fees));
-    convert_amount_to_eth(tx->gas_fee_cap, tx->gas_fee_cap_len, max_fees);
+    convert_amount_to_eth(tx->gas_fee_cap, tx->gas_fee_cap_len, max_fees, sizeof(max_fees));
     PRINTF("max fees %s\n", max_fees);
     memset(g_max_fees, 0, sizeof(g_max_fees));
     snprintf(g_max_fees, sizeof(g_max_fees), "QRL %.*s", sizeof(max_fees), max_fees);

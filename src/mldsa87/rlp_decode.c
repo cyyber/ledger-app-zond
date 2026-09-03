@@ -4,7 +4,10 @@
 #include <string.h>
 #include "cx.h"
 
-static int parse_rlp_item(const uint8_t *input, size_t input_len, const uint8_t **out_data, size_t *out_len) {
+static int parse_rlp_item(const uint8_t *input,
+                          size_t input_len,
+                          const uint8_t **out_data,
+                          size_t *out_len) {
     if (input_len == 0) {
         PRINTF("ERROR input len\n");
         return -1;
@@ -55,19 +58,23 @@ static int parse_rlp_item(const uint8_t *input, size_t input_len, const uint8_t 
     } else {
         // Long list
         size_t len_of_len = prefix - 0xf7;
-        if (1 + len_of_len > input_len) return -1;
+        if (len_of_len > input_len - 1) return -1;
         size_t len = 0;
         for (size_t i = 0; i < len_of_len; i++) {
             len = (len << 8) | input[1 + i];
         }
-        if (1 + len_of_len + len > input_len) return -1;
+        // subtractive form: the additive check overflows for huge len
+        if (len > input_len - 1 - len_of_len) return -1;
         *out_data = &input[1 + len_of_len];
         *out_len = len;
         return 1 + len_of_len + len;
     }
 }
 
-static int parse_rlp_list_header(const uint8_t *input, size_t input_len, size_t *payload_len, size_t *header_len) {
+static int parse_rlp_list_header(const uint8_t *input,
+                                 size_t input_len,
+                                 size_t *payload_len,
+                                 size_t *header_len) {
     if (input_len == 0) {
         PRINTF("ERROR parse header input len\n");
         return -1;
@@ -149,17 +156,19 @@ int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx) {
     }
     memcpy(tx->chain_id, val_ptr, val_len);
     tx->chain_id_len = val_len;
-    p += consumed; remaining -= consumed;
+    p += consumed;
+    remaining -= consumed;
 
     // 2. nonce
     consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
-    if (consumed < 0) {
+    if (consumed < 0 || val_len > sizeof(tx->nonce)) {
         PRINTF("nonce\n");
         return -1;
     }
     memcpy(tx->nonce, val_ptr, val_len);
     tx->nonce_len = val_len;
-    p += consumed; remaining -= consumed;
+    p += consumed;
+    remaining -= consumed;
 
     // 3. gas_tip_cap
     consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
@@ -169,7 +178,8 @@ int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx) {
     }
     memcpy(tx->gas_tip_cap, val_ptr, val_len);
     tx->gas_tip_cap_len = val_len;
-    p += consumed; remaining -= consumed;
+    p += consumed;
+    remaining -= consumed;
 
     // 4. gas_fee_cap
     consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
@@ -179,17 +189,19 @@ int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx) {
     }
     memcpy(tx->gas_fee_cap, val_ptr, val_len);
     tx->gas_fee_cap_len = val_len;
-    p += consumed; remaining -= consumed;
+    p += consumed;
+    remaining -= consumed;
 
     // 5. gas
     consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
-    if (consumed < 0) {
+    if (consumed < 0 || val_len > sizeof(tx->gas)) {
         PRINTF("gas\n");
         return -1;
     }
     memcpy(tx->gas, val_ptr, val_len);
     tx->gas_len = val_len;
-    p += consumed; remaining -= consumed;
+    p += consumed;
+    remaining -= consumed;
 
     // 6. to
     consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
@@ -199,7 +211,8 @@ int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx) {
     }
     memset(tx->to, 0, ADDRESS_LENGTH);
     if (val_len > 0) memcpy(tx->to, val_ptr, val_len);
-    p += consumed; remaining -= consumed;
+    p += consumed;
+    remaining -= consumed;
 
     // 7. value
     consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
@@ -210,7 +223,8 @@ int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx) {
     memset(tx->value, 0, MAX_FIELD_SIZE);
     memcpy(tx->value, val_ptr, val_len);  // right-align
     tx->value_len = val_len;
-    p += consumed; remaining -= consumed;
+    p += consumed;
+    remaining -= consumed;
 
     // 8. data
     consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
@@ -218,7 +232,8 @@ int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx) {
         PRINTF("Invalid data field\n");
         return -1;
     }
-    p += consumed; remaining -= consumed;
+    p += consumed;
+    remaining -= consumed;
 
     // 9. access_list
     consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
@@ -226,17 +241,28 @@ int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx) {
         PRINTF("Invalid access_list field\n");
         return -1;
     }
-    p += consumed; remaining -= consumed;
+    p += consumed;
+    remaining -= consumed;
 
-    // 10. descriptor (ML-DSA-87: wallet_type + metadata, 3 bytes)
+    // 10. descriptor (ML-DSA-87: wallet_type + metadata, exactly 01 00 00)
     consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
-    if (consumed < 0 || val_len > 3) {
+    if (consumed < 0 || val_len != 3 || val_ptr[0] != 0x01 || val_ptr[1] != 0x00 ||
+        val_ptr[2] != 0x00) {
         PRINTF("Invalid descriptor field\n");
         return -1;
     }
     memcpy(tx->descriptor, val_ptr, val_len);
     tx->descriptor_len = val_len;
-    p += consumed; remaining -= consumed;
+    p += consumed;
+    remaining -= consumed;
+
+    // 11. extra_params (reserved by go-qrl, part of the sighash, must be empty)
+    consumed = parse_rlp_item(p, remaining, &val_ptr, &val_len);
+    if (consumed < 0 || val_len != 0) {
+        PRINTF("Invalid extra_params field\n");
+        return -1;
+    }
+    p += consumed;
 
     if (p != payload_end) {
         PRINTF("Payload length mismatch\n");

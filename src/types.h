@@ -6,7 +6,6 @@
 #include "bip32.h"
 
 #include "constants.h"
-#include "tx_types.h"
 #include "constant.h"
 #include "rlp_decode.h"
 
@@ -52,11 +51,7 @@ typedef struct {
 typedef struct {
     uint8_t raw_tx[MAX_TRANSACTION_LEN];  /// raw transaction serialized
     size_t raw_tx_len;                    /// length of raw transaction
-    transaction_t transaction;            /// structured transaction
     uint8_t m_hash[32];                   /// message hash digest
-    uint8_t signature[MAX_DER_SIG_LEN];   /// transaction signature encoded in DER
-    uint8_t signature_len;                /// length of transaction signature
-    uint8_t v;                            /// parity of y-coordinate of R in ECDSA signature
 } transaction_ctx_t;
 
 /**
@@ -71,7 +66,5 @@ typedef struct {
     request_type_e req_type;              /// user request
     uint32_t bip32_path[MAX_BIP32_PATH];  /// BIP32 path
     uint8_t bip32_path_len;               /// length of BIP32 path
-    uint8_t address[ADDRESS_SIZE];  
+    uint8_t address[ADDRESS_SIZE];
 } global_ctx_t;
-
-

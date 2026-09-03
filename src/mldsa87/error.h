@@ -1,8 +1,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-typedef enum
-{
+typedef enum {
     ERR_NONE = 0,
     ERR_FAILED_GENERATE_RANDOM_SEED,
     ERR_FAILED_DECODE_HEXSEED,

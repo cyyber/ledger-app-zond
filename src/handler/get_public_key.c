@@ -44,12 +44,15 @@ int handler_get_public_key(buffer_t *cdata, bool display) {
         return io_send_sw(SW_WRONG_DATA_LENGTH);
     }
 
-    cx_err_t error = address_from_bip32_path(G_context.bip32_path,
-                                                  G_context.bip32_path_len,
-                                                  G_context.address);
+    if (!is_valid_zond_bip32_path(G_context.bip32_path, (size_t) G_context.bip32_path_len)) {
+        return io_send_sw(SW_WRONG_DATA_LENGTH);
+    }
+
+    cx_err_t error =
+        address_from_bip32_path(G_context.bip32_path, G_context.bip32_path_len, G_context.address);
 
     PRINTF("error %d\n", error);
-    for(int i = 0; i < CRYPTO_PUBLIC_KEY_BYTES; i++) {
+    for (int i = 0; i < CRYPTO_PUBLIC_KEY_BYTES; i++) {
         PRINTF("%02x", N_storage.pk[i]);
     }
     PRINTF("\n");

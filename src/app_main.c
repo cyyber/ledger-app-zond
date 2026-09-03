@@ -20,7 +20,6 @@
 
 #include "os.h"
 #include "ux.h"
-#include "swap.h"
 
 #include "types.h"
 #include "globals.h"
@@ -42,14 +41,7 @@ void app_main() {
 
     io_init();
 
-#ifdef HAVE_SWAP
-    // When called in swap context as a library, we don't want to show the menu
-    if (!G_called_from_swap) {
-#endif
-        ui_menu_main();
-#ifdef HAVE_SWAP
-    }
-#endif
+    ui_menu_main();
 
     // Reset context
     explicit_bzero(&G_context, sizeof(G_context));
