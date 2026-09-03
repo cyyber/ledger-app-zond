@@ -34,7 +34,7 @@ def verify_name(name: str) -> None:
 
     name_str = ""
     lines = _read_makefile()
-    name_re = re.compile(r"^APPNAME\s?=\s?\"?(?P<val>\w+)\"?", re.I)
+    name_re = re.compile(r"^APPNAME\s*=\s*\"?(?P<val>[^\"#\n]+?)\"?\s*$", re.I)
     for line in lines:
         info = name_re.match(line)
         if info:

@@ -15,4 +15,4 @@ void print_poly(Poly *a);
 void print_hex(char *, uint8_t *, size_t);
 void print_tx(zond_tx_t tx);
 
-#endif // !UTILS_H
+#endif  // !UTILS_H

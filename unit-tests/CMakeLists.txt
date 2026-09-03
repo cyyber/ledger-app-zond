@@ -7,7 +7,7 @@ endif()
 # project information
 project(unit_tests
         VERSION 0.1
-	      DESCRIPTION "Unit tests for Ledger Nano application"
+        DESCRIPTION "Unit tests for the QRL v2.0 Ledger application"
         LANGUAGES C)
 
 
@@ -35,40 +35,17 @@ endif()
 
 add_compile_definitions(TEST)
 
-include_directories(../src)
-include_directories(../src/transaction)
-include_directories($ENV{BOLOS_SDK}/lib_standard_app)
+# stubs/ provides a host cx.h (PRINTF only) so device sources compile off-device
+include_directories(stubs)
+include_directories(../src/mldsa87)
 
-add_executable(test_tx_parser test_tx_parser.c)
-add_executable(test_tx_utils test_tx_utils.c)
+add_executable(test_rlp_decode test_rlp_decode.c)
 
-add_library(base58 SHARED $ENV{BOLOS_SDK}/lib_standard_app/base58.c)
-add_library(bip32 SHARED $ENV{BOLOS_SDK}/lib_standard_app/bip32.c)
-add_library(buffer SHARED $ENV{BOLOS_SDK}/lib_standard_app/buffer.c)
-add_library(read SHARED $ENV{BOLOS_SDK}/lib_standard_app/read.c)
-add_library(write SHARED $ENV{BOLOS_SDK}/lib_standard_app/write.c)
-add_library(format SHARED $ENV{BOLOS_SDK}/lib_standard_app/format.c)
-add_library(varint SHARED $ENV{BOLOS_SDK}/lib_standard_app/varint.c)
-add_library(apdu_parser SHARED $ENV{BOLOS_SDK}/lib_standard_app/parser.c)
-add_library(transaction_deserialize ../src/transaction/deserialize.c)
-add_library(transaction_serialize ../src/transaction/serialize.c)
-add_library(transaction_utils ../src/transaction/utils.c)
+add_library(rlp_decode ../src/mldsa87/rlp_decode.c)
 
-target_link_libraries(test_tx_parser PUBLIC
-                      transaction_deserialize
-                      transaction_serialize
-                      buffer
-                      bip32
+target_link_libraries(test_rlp_decode PUBLIC
+                      rlp_decode
                       cmocka
-                      gcov
-                      write
-                      read
-                      varint
-                      transaction_utils)
-target_link_libraries(test_tx_utils PUBLIC
-                      cmocka
-                      gcov
-                      transaction_utils)
+                      gcov)
 
-add_test(test_tx_parser test_tx_parser)
-add_test(test_tx_utils test_tx_utils)
+add_test(test_rlp_decode test_rlp_decode)

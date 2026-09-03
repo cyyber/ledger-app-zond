@@ -31,10 +31,9 @@
 #include "sw.h"
 #include "address.h"
 #include "validate.h"
-#include "tx_types.h"
 #include "menu.h"
 
-static char g_address[1+ADDRESS_SIZE*2+1];
+static char g_address[1 + ADDRESS_SIZE * 2 + 1];
 
 static void review_choice(bool confirm) {
     // Answer, display a status page and go back to main
@@ -53,18 +52,14 @@ int ui_display_address() {
     }
 
     memset(g_address, 0, sizeof(g_address));
-    uint8_t address[ADDRESS_SIZE] = {0};
-    memmove(address, G_context.address, ADDRESS_SIZE);
-
-    if (format_hex(address, sizeof(address), g_address + 1, sizeof(g_address)-1) == -1) {
+    if (!format_checksummed_address(G_context.address, g_address, sizeof(g_address))) {
         return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
     }
-    g_address[0] = ZOND_ADDRESS_PREFIX;
 
     nbgl_useCaseAddressReview(g_address,
                               NULL,
                               &ICON_APP_BOILERPLATE,
-                              "Verify Zond address",
+                              "Verify QRL v2.0 address",
                               NULL,
                               review_choice);
     return 0;

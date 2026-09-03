@@ -2,24 +2,24 @@
 
 ## About
 
-This documentation describes the APDU messages interface to communicate with the Zond application.
+This documentation describes the APDU messages interface to communicate with the QRL v2.0 application.
 
 The application covers the following functionalities :
 
-- Get a public Zond address given a BIP 32 path
-- Sign a Zond transaction given a BIP 32 path and RLP encoded transaction data
-- Retrieve the Zond app version
-- Retrieve the Zond app name
+- Get a public QRL v2.0 address given a BIP 32 path
+- Sign a QRL v2.0 transaction given a BIP 32 path and RLP encoded transaction data
+- Retrieve the QRL v2.0 app version
+- Retrieve the QRL v2.0 app name
 
 The application interface can be accessed over HID or BLE
 
 ## APDUs
 
-### GET Zond PUBLIC ADDRESS
+### GET QRL v2.0 PUBLIC ADDRESS
 
 #### Description
 
-This command returns the public Zond address for the given BIP 32 path.
+This command returns the public QRL v2.0 address for the given BIP 32 path.
 
 The address can be verified on the device before being returned.
 
@@ -47,13 +47,13 @@ The address can be verified on the device before being returned.
 | Description                                                      | Length |
 | ---                                                              | ---    |
 | Prefix (`Q`)                                                     | 1      |
-| Address                                                          | 20     |
+| Address                                                          | 64     |
 
-### SIGN Zond TRANSACTION
+### SIGN QRL v2.0 TRANSACTION
 
 #### Description
 
-This command signs a Zond transaction after having the user validate the transactions parameters.
+This command signs a QRL v2.0 transaction after having the user validate the transactions parameters.
 
 The input data is the RLP encoded transaction streamed to the device in 255 bytes maximum data chunks.
 
@@ -100,7 +100,7 @@ None
 
 #### Description
 
-This command returns Zond application version
+This command returns QRL v2.0 application version
 
 #### Coding
 
@@ -126,7 +126,7 @@ None
 
 #### Description
 
-This command returns Zond application name
+This command returns QRL v2.0 application name
 
 #### Coding
 

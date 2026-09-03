@@ -23,7 +23,7 @@ endif
 #        Mandatory configuration       #
 ########################################
 # Application name
-APPNAME = "Boilerplate"
+APPNAME = "QRL v2.0"
 
 # Application version
 APPVERSION_M = 2
@@ -36,16 +36,16 @@ APP_SOURCE_PATH += src
 
 # Application icons following guidelines:
 # https://developers.ledger.com/docs/embedded-app/design-requirements/#device-icon
-ICON_NANOX = icons/app_boilerplate_14px.gif
-ICON_NANOSP = icons/app_boilerplate_14px.gif
-ICON_STAX = icons/app_boilerplate_32px.gif
-ICON_FLEX = icons/app_boilerplate_40px.gif
+ICON_NANOX = icons/app_qrl_14px.gif
+ICON_NANOSP = icons/app_qrl_14px.gif
+ICON_STAX = icons/app_qrl_32px.gif
+ICON_FLEX = icons/app_qrl_40px.gif
 
 # With the Nano NBGL Design, the Home Screen icon is the reverse of the App icon:
 # It should be on white background, with rounded corners.
 # This definition allows SDK Makefiles to automatically generate it based on the App icon.
 # Please note that the icon is dynamically generated, and declared in the .gitignore to avoid storing it.
-ICON_HOME_NANO = glyphs/home_boilerplate_14px.gif
+ICON_HOME_NANO = glyphs/home_qrl_14px.gif
 
 # Application allowed derivation curves.
 # Possibles curves are: secp256k1, secp256r1, ed25519 and bls12381g1
@@ -60,7 +60,7 @@ CURVE_APP_LOAD_PARAMS = secp256k1
 # and SLIP-0044 standards.
 # If your app needs it, you can specify multiple path by using:
 # `PATH_APP_LOAD_PARAMS = "44'/1'" "45'/1'"`
-PATH_APP_LOAD_PARAMS = "44'/238'"   # purpose=coin(44) / coin_type=Testnet(1)
+PATH_APP_LOAD_PARAMS = "44'/238'"   # purpose=44' / coin_type=238' (QRL)
 
 # Setting to allow building variant applications
 # - <VARIANT_PARAM> is the name of the parameter which should be set
@@ -69,7 +69,7 @@ PATH_APP_LOAD_PARAMS = "44'/238'"   # purpose=coin(44) / coin_type=Testnet(1)
 #   * It must at least contains one value.
 #   * Values can be the app ticker or anything else but should be unique.
 VARIANT_PARAM = COIN
-VARIANT_VALUES = BOL
+VARIANT_VALUES = QRL
 
 # Enabling DEBUG flag will enable PRINTF and disable optimizations
 #DEBUG = 1
@@ -96,15 +96,6 @@ ENABLE_NBGL_FOR_NANO_DEVICES = 1
 ENABLE_NBGL_QRCODE = 1
 #ENABLE_NBGL_KEYBOARD = 1
 #ENABLE_NBGL_KEYPAD = 1
-
-########################################
-#       SWAP FEATURE FLAG      		   #
-# This flag enables the swap feature   #
-# in the Boiler application.           #
-########################################
-ifeq ($(APPNAME), "Boilerplate")
-ENABLE_TESTING_SWAP = 1
-endif
 
 ########################################
 #          Features disablers          #

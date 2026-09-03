@@ -39,12 +39,12 @@ int helper_send_response_address() {
 }
 
 int helper_send_response_sig(uint8_t index) {
-    if(index < 17) {
+    if (index < 17) {
         uint8_t resp[SIGNATURE_CHUNK_SIZE] = {0};
         size_t offset = 0;
 
-        for(int i = 0; i < SIGNATURE_CHUNK_SIZE; i++) {
-            resp[i] = N_storage.sig[i + index*SIGNATURE_CHUNK_SIZE];
+        for (int i = 0; i < SIGNATURE_CHUNK_SIZE; i++) {
+            resp[i] = N_storage.sig[i + index * SIGNATURE_CHUNK_SIZE];
         }
         offset += SIGNATURE_CHUNK_SIZE;
 
@@ -53,33 +53,33 @@ int helper_send_response_sig(uint8_t index) {
         uint8_t resp[SIGNATURE_LAST_CHUNK_SIZE] = {0};
         size_t offset = 0;
 
-        for(int i = 0; i < SIGNATURE_LAST_CHUNK_SIZE; i++) {
-            resp[i] = N_storage.sig[i + index*SIGNATURE_CHUNK_SIZE];
+        for (int i = 0; i < SIGNATURE_LAST_CHUNK_SIZE; i++) {
+            resp[i] = N_storage.sig[i + index * SIGNATURE_CHUNK_SIZE];
         }
         offset += SIGNATURE_LAST_CHUNK_SIZE;
 
         io_send_response_pointer(resp, offset, SW_OK);
     }
 
-    if(index == 0) {
+    if (index == 0) {
         uint8_t temp = 1;
-        nvm_write((void *)&N_storage.is_sending_signature, &temp, sizeof(uint8_t));
-    } else if(index == 17) {
+        nvm_write((void *) &N_storage.is_sending_signature, &temp, sizeof(uint8_t));
+    } else if (index == 17) {
         uint8_t temp = 0;
-        nvm_write((void *)&N_storage.is_sending_signature, &temp, sizeof(uint8_t));
+        nvm_write((void *) &N_storage.is_sending_signature, &temp, sizeof(uint8_t));
     }
 
     return 0;
 }
 
 int helper_send_response_pk_chunk(uint8_t index) {
-    if(index >= PK_CHUNKS) {
+    if (index >= PK_CHUNKS) {
         return io_send_sw(SW_WRONG_DATA_LENGTH);
     }
 
     size_t chunk_size = (index < PK_CHUNKS - 1) ? PK_CHUNK_SIZE : PK_LAST_CHUNK_SIZE;
     uint8_t resp[PK_CHUNK_SIZE] = {0};
-    for(size_t i = 0; i < chunk_size; i++) {
+    for (size_t i = 0; i < chunk_size; i++) {
         resp[i] = N_storage.pk[i + index * PK_CHUNK_SIZE];
     }
     io_send_response_pointer(resp, chunk_size, SW_OK);

@@ -5,8 +5,11 @@ build/
 bin/
 debug/
 
-# Nano NBGL reversed icon for Home Screen
-glyphs/home_boilerplate_14px.gif
+# Ragger/pytest scratch output
+tests/snapshots-tmp/
+tests/.pytest_cache/
+tests/__pycache__/
+tests/application_client/__pycache__/
 
 # Temporary directory with snapshots taken during test runs
 tests/snapshots-tmp/
@@ -35,3 +38,4 @@ doc/latex
 
 # Virtual env for sideload (macOS and Windows)
 ledger/
+node_modules/

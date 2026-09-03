@@ -37,8 +37,8 @@ void app_quit(void) {
 //  --------------------- SETTINGS MENU -----------------------
 //  -----------------------------------------------------------
 #define SETTING_INFO_NB 2
-static const char* const INFO_TYPES[SETTING_INFO_NB] = {"Version", "Developer"};
-static const char* const INFO_CONTENTS[SETTING_INFO_NB] = {APPVERSION, "Ledger"};
+static const char *const INFO_TYPES[SETTING_INFO_NB] = {"Version", "Developer"};
+static const char *const INFO_CONTENTS[SETTING_INFO_NB] = {APPVERSION, "Ledger"};
 
 // settings switches definitions
 enum { BLIND_SIGNING_SWITCH_TOKEN = FIRST_USER_TOKEN, NONCE_SWITCH_TOKEN, TX_HASH_SWITCH_TOKEN };
@@ -99,15 +99,15 @@ static void controls_callback(int token, uint8_t index, int page) {
     if (token == BLIND_SIGNING_SWITCH_TOKEN) {
         switch_value = !N_storage.enable_blind_signing;
         switches[BLIND_SIGNING_SWITCH_ID].initState = (nbgl_state_t) switch_value;
-        nvm_write((void*) &N_storage.enable_blind_signing, &switch_value, 1);
+        nvm_write((void *) &N_storage.enable_blind_signing, &switch_value, 1);
     } else if (token == NONCE_SWITCH_TOKEN) {
         switch_value = !N_storage.display_nonce;
         switches[NONCE_SWITCH_ID].initState = (nbgl_state_t) switch_value;
-        nvm_write((void*) &N_storage.display_nonce, &switch_value, 1);
+        nvm_write((void *) &N_storage.display_nonce, &switch_value, 1);
     } else if (token == TX_HASH_SWITCH_TOKEN) {
         switch_value = !N_storage.display_tx_hash;
         switches[TX_HASH_SWITCH_ID].initState = (nbgl_state_t) switch_value;
-        nvm_write((void*) &N_storage.display_tx_hash, &switch_value, 1);
+        nvm_write((void *) &N_storage.display_tx_hash, &switch_value, 1);
     }
 }
 

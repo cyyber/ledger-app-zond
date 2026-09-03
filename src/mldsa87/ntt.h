@@ -7,4 +7,4 @@
 void ntt(int32_t (*a)[N]);
 void inv_ntt_to_mont(int32_t (*a)[N]);
 
-#endif // !NTT_H
+#endif  // !NTT_H

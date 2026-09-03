@@ -3,7 +3,6 @@
 #include "parser.h"
 #include "types.h"
 
-
 #define DATA_FIRST 0x00
 
 #define DATA_MORE 0x01

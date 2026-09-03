@@ -18,9 +18,9 @@ void poly_shitf_l(Poly *a);
 void poly_ntt(Poly *a);
 void poly_inv_ntt_to_mont(Poly *a);
 void poly_pointwise_montgomery(Poly *c, Poly *a, Poly *b);
-void poly_power2_round(Poly *a1, Poly *a0, Poly *a);   
-void poly_decompose(Poly *a1, Poly *a0, Poly *a); 
-uint32_t poly_make_hint(Poly *h, Poly *a0, Poly *a1); 
+void poly_power2_round(Poly *a1, Poly *a0, Poly *a);
+void poly_decompose(Poly *a1, Poly *a0, Poly *a);
+uint32_t poly_make_hint(Poly *h, Poly *a0, Poly *a1);
 void poly_use_hint(Poly *b, Poly *a, Poly *h);
 int32_t poly_chk_norm(Poly *a, int32_t B);
 ErrorCode poly_uniform(Poly *a, uint8_t (*seed)[SEED_BYTES], uint16_t nonce);
@@ -31,12 +31,12 @@ void poly_uniform_gamma1(Poly *a, uint8_t seed[CRH_BYTES], uint16_t nonce);
 ErrorCode poly_challenge(Poly *c, uint8_t seed[], size_t seed_len);
 void poly_eta_pack(uint8_t r[], Poly *a);
 void poly_eta_unpack(Poly *r, uint8_t a[]);
-void poly_t1_pack(uint8_t r[], Poly *a); 
+void poly_t1_pack(uint8_t r[], Poly *a);
 void poly_t1_unpack(Poly *r, uint8_t a[]);
 void poly_t0_pack(uint8_t r[], Poly *a);
 void poly_t0_unpack(Poly *r, uint8_t a[]);
 void poly_z_pack(uint8_t r[], Poly *a);
 void poly_z_unpack(Poly *r, uint8_t a[]);
-void poly_w1_pack(uint8_t r[], Poly *a);   
+void poly_w1_pack(uint8_t r[], Poly *a);
 
 #endif

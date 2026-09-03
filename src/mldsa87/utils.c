@@ -18,9 +18,12 @@ static void byte_to_hex(uint8_t byte, char *out) {
 }
 
 static uint8_t hex_char_to_value(char c) {
-    if(c >= '0' && c <= '9') return c - '0';
-    else if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-    else if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    else if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    else if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
     return 0;
 }
 
@@ -44,13 +47,14 @@ int decode_from_hex_string(const char *hex_str, uint8_t *out_bytes, size_t max_l
 
     for (size_t i = 0; i < byte_len; i++) {
         hex_val[0] = hex_str[i * 2];
-        hex_val[1] = hex_str[i * 2 + 1];;
+        hex_val[1] = hex_str[i * 2 + 1];
+        ;
         out_bytes[i] = hex_string_to_byte(hex_val);
     }
-    return (int)byte_len;
+    return (int) byte_len;
 }
 
-void print_tx(zond_tx_t tx) { 
+void print_tx(zond_tx_t tx) {
     PRINTF("======== ZOND TX ========\n");
     PRINTF("Chain ID: 0x");
     for (int i = 0; i < tx.chain_id_len; i++) PRINTF("%02x", tx.chain_id[i]);
@@ -84,14 +88,14 @@ void print_tx(zond_tx_t tx) {
 
 void print_polyveck(PolyVecK *a) {
     PRINTF("\n");
-    for(int i = 0; i < K; ++i) {
+    for (int i = 0; i < K; ++i) {
         PRINTF("[");
-        for(int j = 0; j < N; ++j) {
-            if(j == N-1) {
+        for (int j = 0; j < N; ++j) {
+            if (j == N - 1) {
                 PRINTF("%d", a->vec[i].coeffs[j]);
             } else {
                 PRINTF("%d,", a->vec[i].coeffs[j]);
-            }   
+            }
         }
         PRINTF("]");
         PRINTF("\n");
@@ -103,10 +107,10 @@ void print_polyveck(PolyVecK *a) {
 
 void print_polyvecl(PolyVecL *a) {
     PRINTF("\n");
-    for(int i = 0; i < L; ++i) {
+    for (int i = 0; i < L; ++i) {
         PRINTF("[");
-        for(int j = 0; j < N; ++j) {
-            if(j == N-1) {
+        for (int j = 0; j < N; ++j) {
+            if (j == N - 1) {
                 PRINTF("%d", a->vec[i].coeffs[j]);
             } else {
                 PRINTF("%d,", a->vec[i].coeffs[j]);
@@ -122,7 +126,7 @@ void print_polyvecl(PolyVecL *a) {
 
 void print_hex(char *name, uint8_t *data, size_t len) {
     PRINTF("%s: ", name);
-    for(int i = 0; i < len; i++) {
+    for (int i = 0; i < len; i++) {
         PRINTF("%02x", data[i]);
     }
     PRINTF("\n");
@@ -131,8 +135,8 @@ void print_hex(char *name, uint8_t *data, size_t len) {
 void print_poly(Poly *a) {
     PRINTF("\n");
     PRINTF("[");
-    for(int j = 0; j < N; ++j) {
-        if(j == N-1) {
+    for (int j = 0; j < N; ++j) {
+        if (j == N - 1) {
             PRINTF("%d", a->coeffs[j]);
         } else {
             PRINTF("%d,", a->coeffs[j]);

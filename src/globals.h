@@ -28,9 +28,9 @@ typedef struct internal_storage_t {
     Poly cp;
     union {
         PolyVecK t0;
-        uint8_t buf_verify[K*POLY_W1_PACKED_BYTES];
+        uint8_t buf_verify[K * POLY_W1_PACKED_BYTES];
     } pack1;
-    
+
     uint8_t sig[CRYPTO_BYTES];
     uint8_t pk[CRYPTO_PUBLIC_KEY_BYTES];
     uint8_t buf[850];
@@ -43,5 +43,3 @@ typedef struct internal_storage_t {
 
 extern const internal_storage_t N_storage_real;
 #define N_storage (*(volatile internal_storage_t *) PIC(&N_storage_real))
-
-

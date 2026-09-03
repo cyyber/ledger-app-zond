@@ -19,16 +19,16 @@
 #define POLY_UNIFORM_GAMMA1_N_BLOCKS \
     ((POLY_Z_PACKED_BYTES + STREAM_256_BLOCK_BYTES - 1) / STREAM_256_BLOCK_BYTES)
 
-#define ADDRESS_SIZE 20
+#define ADDRESS_SIZE     64
 #define DESCRIPTOR_BYTES 3
-#define SEED_BYTES 32
-#define CRH_BYTES  64  // hash of public key
-#define TR_BYTES   64
-#define RND_BYTES  32
-#define N          256
-#define Q_CONST    8380417
-#define Q_INV      58728449  // -q^(-1) mod 2^32
-#define D          13
+#define SEED_BYTES       32
+#define CRH_BYTES        64  // hash of public key
+#define TR_BYTES         64
+#define RND_BYTES        32
+#define N                256
+#define Q_CONST          8380417
+#define Q_INV            58728449  // -q^(-1) mod 2^32
+#define D                13
 
 #define K            8
 #define L            7
@@ -48,17 +48,17 @@
 #define POLY_VEC_H_PACKED_BYTES (OMEGA + K)
 #define POLY_W1_PACKED_BYTES    128
 
-#define CTX_LEN 4
+#define CTX_LEN     8
 #define MESSAGE_LEN 500
 
-#define SIGNATURE_CHUNK_SIZE 258
+#define SIGNATURE_CHUNK_SIZE      258
 #define SIGNATURE_LAST_CHUNK_SIZE 241
 
-#define PK_CHUNK_SIZE 258
+#define PK_CHUNK_SIZE      258
 #define PK_LAST_CHUNK_SIZE 12
-#define PK_CHUNKS 11
+#define PK_CHUNKS          11
 
 extern const int ZETAS[N];
-extern const uint8_t CTX[4];
+extern const uint8_t CTX[CTX_LEN];
 
 #endif
