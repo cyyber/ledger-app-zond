@@ -109,7 +109,7 @@ ErrorCode poly_uniform(Poly *a, uint8_t (*seed)[SEED_BYTES], uint16_t nonce) {
 
     shake128_ctx ctx;
     shake128_init(&ctx);
-    shake128_absorb(&ctx, seed, SEED_BYTES);
+    shake128_absorb(&ctx, *seed, SEED_BYTES);
     uint8_t nonces[2] = {(uint8_t) (nonce), (uint8_t) (nonce >> 8)};
     shake128_absorb(&ctx, nonces, 2);
     shake128_finalize(&ctx);
@@ -178,7 +178,7 @@ ErrorCode poly_uniform_eta(Poly *a, uint8_t (*seed)[CRH_BYTES], uint16_t nonce) 
     uint8_t buf[POLY_UNIFORM_ETA_N_BLOCKS * STREAM_256_BLOCK_BYTES] = {0};
     shake256_ctx ctx;
     shake256_init(&ctx);
-    shake256_absorb(&ctx, seed, CRH_BYTES);
+    shake256_absorb(&ctx, *seed, CRH_BYTES);
     uint8_t nonces[2] = {(uint8_t) (nonce), (uint8_t) (nonce >> 8)};
     shake256_absorb(&ctx, nonces, 2);
     shake256_finalize(&ctx);

@@ -72,7 +72,7 @@ cx_err_t address_from_bip32_path(const uint32_t bip32_path[],
     shake256_ctx ctx;
     shake256_init(&ctx);
     shake256_absorb(&ctx, desc, DESCRIPTOR_BYTES);
-    shake256_absorb(&ctx, &N_storage.pk, CRYPTO_PUBLIC_KEY_BYTES);
+    shake256_absorb(&ctx, (const uint8_t *) N_storage.pk, CRYPTO_PUBLIC_KEY_BYTES);
     shake256_finalize(&ctx);
     shake256_squeeze(&ctx, address, ADDRESS_SIZE);
     shake256_clear(&ctx);

@@ -87,10 +87,10 @@ static void format_with_decimals(const char *raw, int decimals, char *out) {
     char buffer[MAX_RESULT_LEN];
     char *dot = buffer;
 
-    if (len <= decimals) {
+    if (len <= (size_t) decimals) {
         strcpy(buffer, "0.");
         dot += 2;
-        for (int i = 0; i < decimals - len; i++) *dot++ = '0';
+        for (size_t i = 0; i < decimals - len; i++) *dot++ = '0';
         strcpy(dot, raw);
     } else {
         size_t int_part = len - decimals;
@@ -114,13 +114,6 @@ static void convert_amount_to_eth(const uint8_t *amount, size_t len, char *out_s
     char dec[MAX_RESULT_LEN];
     uint8_array_to_decimal(amount, len, dec);
     format_with_decimals(dec, 18, out_str);
-}
-
-// Wrapper: fees in wei to Gwei
-static void convert_fees_to_gwei(const uint8_t *fees, size_t len, char *out_str) {
-    char dec[MAX_RESULT_LEN];
-    uint8_array_to_decimal(fees, len, dec);
-    format_with_decimals(dec, 9, out_str);
 }
 
 // called when long press button on 3rd page is long-touched or when reject footer is touched

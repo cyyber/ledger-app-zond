@@ -56,7 +56,7 @@ static int crypto_sign_message(void) {
     bool is_verified = false;
     error = crypto_verify_optimized(G_context.bip32_path,
                                     G_context.bip32_path_len,
-                                    N_storage.sig,
+                                    (uint8_t *) N_storage.sig,
                                     CRYPTO_BYTES,
                                     G_context.tx_info.m_hash,
                                     32,

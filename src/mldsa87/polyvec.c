@@ -51,9 +51,9 @@ ErrorCode poly_vec_matrix_expand(PolyVecL (*mat)[K], uint8_t (*rho)[SEED_BYTES])
     return 0;
 }
 
-int32_t poly_vec_l_chk_norm(PolyVecL *v, int32_t bound) {
+int32_t poly_vec_l_chk_norm(volatile PolyVecL *v, int32_t bound) {
     for (int i = 0; i < L; i++) {
-        int err = poly_chk_norm(&v->vec[i], bound);
+        int err = poly_chk_norm((Poly *) &v->vec[i], bound);
         if (err != 0) {
             return 1;
         }
@@ -97,9 +97,9 @@ void poly_vec_k_pointwise_poly_montgomery(PolyVecK *r, Poly *a, PolyVecK *v) {
     }
 }
 
-int32_t poly_vec_k_chk_norm(PolyVecK *v, int32_t bound) {
+int32_t poly_vec_k_chk_norm(volatile PolyVecK *v, int32_t bound) {
     for (int i = 0; i < K; i++) {
-        int err = poly_chk_norm(&v->vec[i], bound);
+        int err = poly_chk_norm((Poly *) &v->vec[i], bound);
         if (err != 0) {
             return 1;
         }

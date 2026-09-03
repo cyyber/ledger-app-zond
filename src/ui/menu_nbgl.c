@@ -53,7 +53,6 @@ static const nbgl_contentInfoList_t infoList = {
 };
 
 static uint8_t initSettingPage;
-static void review_warning_choice(bool confirm);
 static void controls_callback(int token, uint8_t index, int page);
 
 // settings menu definition
