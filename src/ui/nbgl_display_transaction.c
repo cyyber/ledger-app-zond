@@ -76,44 +76,59 @@ static void uint8_array_to_decimal(const uint8_t *bytes, size_t len, char *out) 
 }
 
 // Inserts decimal point `decimals` from the right, trims trailing zeros
-static void format_with_decimals(const char *raw, int decimals, char *out) {
+static void format_with_decimals(const char *raw, size_t decimals, char *out, size_t out_len) {
     size_t len = strlen(raw);
+    char buffer[MAX_RESULT_LEN] = {0};
+    size_t pos = 0;
 
     if (decimals == 0) {
-        strcpy(out, raw);
+        snprintf(out, out_len, "%s", raw);
         return;
     }
 
-    char buffer[MAX_RESULT_LEN];
-    char *dot = buffer;
-
-    if (len <= (size_t) decimals) {
-        strcpy(buffer, "0.");
-        dot += 2;
-        for (size_t i = 0; i < decimals - len; i++) *dot++ = '0';
-        strcpy(dot, raw);
+    if (len <= decimals) {
+        buffer[pos++] = '0';
+        buffer[pos++] = '.';
+        for (size_t i = 0; i < decimals - len && pos < MAX_RESULT_LEN - 1; i++) {
+            buffer[pos++] = '0';
+        }
+        for (size_t i = 0; i < len && pos < MAX_RESULT_LEN - 1; i++) {
+            buffer[pos++] = raw[i];
+        }
     } else {
         size_t int_part = len - decimals;
-        strncpy(buffer, raw, int_part);
-        buffer[int_part] = '.';
-        strcpy(buffer + int_part + 1, raw + int_part);
+        for (size_t i = 0; i < int_part && pos < MAX_RESULT_LEN - 1; i++) {
+            buffer[pos++] = raw[i];
+        }
+        if (pos < MAX_RESULT_LEN - 1) {
+            buffer[pos++] = '.';
+        }
+        for (size_t i = int_part; i < len && pos < MAX_RESULT_LEN - 1; i++) {
+            buffer[pos++] = raw[i];
+        }
     }
+    buffer[pos] = '\0';
 
     // Trim trailing zeros
     char *end = buffer + strlen(buffer) - 1;
     while (*end == '0' && end > buffer) {
         *end-- = '\0';
     }
-    if (*end == '.') *end = '\0';  // remove dot if nothing after
+    if (*end == '.') {
+        *end = '\0';  // remove dot if nothing after
+    }
 
-    strcpy(out, buffer);
+    snprintf(out, out_len, "%s", buffer);
 }
 
-// Wrapper: amount in wei to ETH
-static void convert_amount_to_eth(const uint8_t *amount, size_t len, char *out_str) {
+// Wrapper: amount in wei to QRL units
+static void convert_amount_to_eth(const uint8_t *amount,
+                                  size_t len,
+                                  char *out_str,
+                                  size_t out_len) {
     char dec[MAX_RESULT_LEN];
     uint8_array_to_decimal(amount, len, dec);
-    format_with_decimals(dec, 18, out_str);
+    format_with_decimals(dec, 18, out_str, out_len);
 }
 
 // called when long press button on 3rd page is long-touched or when reject footer is touched
@@ -208,7 +223,7 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
     // Format amount
     char amount[30] = {0};
     memset(amount, 0, sizeof(amount));
-    convert_amount_to_eth(tx->value, tx->value_len, amount);
+    convert_amount_to_eth(tx->value, tx->value_len, amount, sizeof(amount));
     PRINTF("amount %s\n", amount);
     memset(g_amount, 0, sizeof(g_amount));
     snprintf(g_amount, sizeof(g_amount), "QRL %.*s", sizeof(amount), amount);
@@ -223,7 +238,7 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
     // Format max_fees
     char max_fees[30] = {0};
     memset(max_fees, 0, sizeof(max_fees));
-    convert_amount_to_eth(tx->gas_fee_cap, tx->gas_fee_cap_len, max_fees);
+    convert_amount_to_eth(tx->gas_fee_cap, tx->gas_fee_cap_len, max_fees, sizeof(max_fees));
     PRINTF("max fees %s\n", max_fees);
     memset(g_max_fees, 0, sizeof(g_max_fees));
     snprintf(g_max_fees, sizeof(g_max_fees), "QRL %.*s", sizeof(max_fees), max_fees);

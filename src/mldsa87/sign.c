@@ -58,10 +58,8 @@ static void shake256_squeeze_volatile(shake256_ctx *ctx, volatile uint8_t *out, 
 static void combined_method(volatile PolyVecK *t1,
                             volatile PolyVecL *s1hat,
                             uint8_t rho[SEED_BYTES]) {
-    size_t a_len = N;
-    size_t buf_len = POLY_UNIFORM_N_BLOCKS * STREAM_128_BLOCK_BYTES;
-    uint32_t aLen = (uint32_t) (a_len);
-    uint32_t bufLen = (uint32_t) (buf_len);
+    uint32_t aLen;
+    uint32_t bufLen;
     int32_t poly_buffer[256] = {0};
     Poly t_poly;
     for (int i = 0; i < K; i++) {
@@ -83,10 +81,10 @@ static void combined_method(volatile PolyVecK *t1,
                                       0,
                                       POLY_UNIFORM_N_BLOCKS * STREAM_128_BLOCK_BYTES + 2);
 
-            a_len = N;
-            buf_len = POLY_UNIFORM_N_BLOCKS * STREAM_128_BLOCK_BYTES + 2;
+            aLen = N;
+            bufLen = POLY_UNIFORM_N_BLOCKS * STREAM_128_BLOCK_BYTES + 2;
             uint32_t ctr = 0, pos = 0, t = 0;
-            while (ctr < a_len && pos + 3 <= buf_len) {
+            while (ctr < aLen && pos + 3 <= bufLen) {
                 t = (uint32_t) (N_storage.buf[pos]);
                 t |= (uint32_t) (N_storage.buf[pos + 1]) << 8;
                 t |= (uint32_t) (N_storage.buf[pos + 2]) << 16;
@@ -116,7 +114,7 @@ static void combined_method(volatile PolyVecK *t1,
                 aLen = N - ctr;
                 bufLen = STREAM_128_BLOCK_BYTES + off;
                 uint32_t ctrNew = 0;
-                pos = 0, t = 0;
+                pos = 0;
                 while (ctrNew < aLen && pos + 3 <= bufLen) {
                     t = (uint32_t) (N_storage.buf[pos]);
                     t |= (uint32_t) (N_storage.buf[pos + 1]) << 8;

@@ -263,7 +263,6 @@ int decode_ledger_tx(const uint8_t *rlp, size_t rlp_len, zond_tx_t *tx) {
         return -1;
     }
     p += consumed;
-    remaining -= consumed;
 
     if (p != payload_end) {
         PRINTF("Payload length mismatch\n");
