@@ -111,4 +111,13 @@ ENABLE_NBGL_QRCODE = 1
 #DISABLE_DEBUG_LEDGER_ASSERT = 1
 #DISABLE_DEBUG_THROW = 1
 
+DEFINES += HAVE_MLDSA_87
+DEFINES += HAVE_MLDSA_OPTIMIZATION
+APP_SOURCE_FILES += $(wildcard $(BOLOS_SDK)/lib_cxng/src/*mldsa*.c) 
+INCLUDES_PATH += $(BOLOS_SDK)/lib_cxng/src
+
 include $(BOLOS_SDK)/Makefile.standard_app
+
+DEFINES += COPYRIGHT_YEAR=\"$(shell git show -s --format=%cd --date=format:%Y HEAD)\"
+
+

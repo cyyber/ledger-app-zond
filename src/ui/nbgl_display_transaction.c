@@ -34,11 +34,13 @@
 #include "validate.h"
 #include "menu.h"
 #include "address.h"
+#include "types.h"
+#include "ui_utils.h"
 
-static char g_from_address[1 + ADDRESS_SIZE * 2 + 1];
-static char g_amount[30];
+// static char g_from_address[1 + ADDRESS_SIZE * 2 + 1];
+static char g_amount[35];
 static char g_to_address[1 + ADDRESS_SIZE * 2 + 1];
-static char g_max_fees[30];
+static char g_max_fees[35];
 static char g_nonce[10];
 static char g_tx_hash[67];
 
@@ -47,8 +49,6 @@ static nbgl_contentTagValueList_t pairList;
 
 #define MAX_DECIMAL_DIGITS 40
 #define MAX_RESULT_LEN     50
-
-
 
 static void uint8_array_to_decimal(const uint8_t *bytes, size_t len, char *out) {
     uint8_t temp[32] = {0};  // Ensure full zero-init
@@ -137,55 +137,49 @@ static void convert_amount_to_eth(const uint8_t *amount,
 // called when long press button on 3rd page is long-touched or when reject footer is touched
 static void review_choice(bool confirm) {
     // Answer, display a status page and go back to main
-    nbgl_useCaseSpinner("Signing");
-    validate_transaction(confirm);
-    if (confirm) {
+    // nbgl_useCaseSpinner("Signing");
+    bool result = validate_transaction(confirm);
+    if (confirm && result) {
         nbgl_useCaseReviewStatus(STATUS_TYPE_TRANSACTION_SIGNED, ui_menu_main);
     } else {
         nbgl_useCaseReviewStatus(STATUS_TYPE_TRANSACTION_REJECTED, ui_menu_main);
     }
 }
 
-void print_tx_utils(zond_tx_t *tx) {
+void print_tx_utils() {
     PRINTF("======== ZOND TX ========\n");
     PRINTF("Chain ID: 0x");
-    for (int i = 0; i < tx->chain_id_len; i++) PRINTF("%02x", tx->chain_id[i]);
+    for (int i = 0; i < G_context.tx_info.tx_data.chain_id_len; i++) PRINTF("%02x", G_context.tx_info.tx_data.chain_id[i]);
     PRINTF("\n");
 
     PRINTF("Nonce: 0x");
-    for (int i = 0; i < tx->nonce_len; i++) PRINTF("%02x", tx->nonce[i]);
+    for (int i = 0; i < G_context.tx_info.tx_data.nonce_len; i++) PRINTF("%02x", G_context.tx_info.tx_data.nonce[i]);
     PRINTF("\n");
 
     PRINTF("Gas Tip Cap: 0x");
-    for (int i = 0; i < tx->gas_tip_cap_len; i++) PRINTF("%02x", tx->gas_tip_cap[i]);
+    for (int i = 0; i < G_context.tx_info.tx_data.gas_tip_cap_len; i++) PRINTF("%02x", G_context.tx_info.tx_data.gas_tip_cap[i]);
     PRINTF("\n");
 
     PRINTF("Gas Fee Cap: 0x");
-    for (int i = 0; i < tx->gas_fee_cap_len; i++) PRINTF("%02x", tx->gas_fee_cap[i]);
+    for (int i = 0; i < G_context.tx_info.tx_data.gas_fee_cap_len; i++) PRINTF("%02x", G_context.tx_info.tx_data.gas_fee_cap[i]);
     PRINTF("\n");
 
     PRINTF("Gas: 0x");
-    for (int i = 0; i < tx->gas_len; i++) PRINTF("%02x", tx->gas[i]);
+    for (int i = 0; i < G_context.tx_info.tx_data.gas_len; i++) PRINTF("%02x", G_context.tx_info.tx_data.gas[i]);
     PRINTF("\n");
 
-    PRINTF("To: 0x");
-    for (int i = 0; i < ADDRESS_LENGTH; i++) PRINTF("%02x", tx->to[i]);
-    PRINTF("\n");
-
-    PRINTF("Value: 0x");
-    for (int i = 0; i < tx->value_len; i++) PRINTF("%02x", tx->value[i]);
-    PRINTF("\n");
-    PRINTF("================\n");
-}
-
-void bytes_to_hex_string(const uint8_t *src, size_t src_len, char *dst) {
-    const char *hex_chars = "0123456789abcdef";
-    for (size_t i = 0; i < src_len; i++) {
-        dst[i * 2]     = hex_chars[(src[i] >> 4) & 0x0F]; // High nibble
-        dst[i * 2 + 1] = hex_chars[src[i] & 0x0F];       // Low nibble
+    if(G_context.tx_info.tx_data.to_len > 0) {
+        PRINTF("To: 0x");
+        for (int i = 0; i < ADDRESS_LENGTH; i++) PRINTF("%02x", G_context.tx_info.tx_data.to[i]);
+        PRINTF("\n");
     }
-    // Always null-terminate the string
-    dst[src_len * 2] = '\0';
+    
+    if(G_context.tx_info.tx_data.value_len > 0) {
+        PRINTF("Value: 0x");
+        for (int i = 0; i < G_context.tx_info.tx_data.value_len; i++) PRINTF("%02x", G_context.tx_info.tx_data.value[i]);
+        PRINTF("\n");
+    }
+    PRINTF("================\n");
 }
 
 // Public function to start the transaction review
@@ -193,129 +187,245 @@ void bytes_to_hex_string(const uint8_t *src, size_t src_len, char *dst) {
 // - Format the amount and address strings in g_amount and g_address buffers
 // - Display the first screen of the transaction review
 // - Display a warning if the transaction is blind-signed
-int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
+int ui_display_transaction_bs_choice(bool is_blind_signed) {
     if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED) {
+        PRINTF("ERROR HERE\n");
         G_context.state = STATE_NONE;
         return io_send_sw(SW_BAD_STATE);
     }
 
-    print_tx_utils(tx);
 
-    PRINTF("DERIVE ADDRESS START\n");
-    nbgl_useCaseSpinner("Getting address");
-    cx_err_t error =
-        address_from_bip32_path(G_context.bip32_path, G_context.bip32_path_len, G_context.address);
-    if (error != CX_OK) {
-        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
-    }
-    PRINTF("DERIVE ADDRESS END\n");
-    PRINTF("from ");
+        // PRINTF("DERIVE ADDRESS START\n");
+        cx_err_t error =
+            address_from_bip32_path(G_context.bip32_path, G_context.bip32_path_len, G_context.address);
+        if (error != CX_OK) {
+            return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
+        }
+        // PRINTF("DERIVE ADDRESS END\n");
+
+    PRINTF("from Q");
     for (int i = 0; i < ADDRESS_SIZE; i++) {
         PRINTF("%02x", G_context.address[i]);
     }
     PRINTF("\n");
 
     // Format nonce
-    uint8_array_to_decimal(tx->nonce, tx->nonce_len, g_nonce);
+    uint8_array_to_decimal(G_context.tx_info.tx_data.nonce, G_context.tx_info.tx_data.nonce_len, g_nonce);
 
     // Format tx hash
     char tx_hash[65] = {0};
     memset(tx_hash, 0, sizeof(tx_hash));
     bytes_to_hex_string(G_context.tx_info.m_hash, 32, tx_hash);
     tx_hash[64] = '\0';
-    PRINTF("tx hash %s\n", tx_hash);
     memset(g_tx_hash, 0, sizeof(g_tx_hash));
     snprintf(g_tx_hash, sizeof(g_tx_hash), "0x%.*s", sizeof(tx_hash), tx_hash);
     PRINTF("tx hash %s\n", g_tx_hash);
 
     // Format from address
-    memset(g_from_address, 0, sizeof(g_from_address));
-    if (!format_checksummed_address(G_context.address, g_from_address, sizeof(g_from_address))) {
+    memset(g_ui_buffer, 0, sizeof(g_ui_buffer));
+    if (!format_checksummed_address(G_context.address, g_ui_buffer, sizeof(g_ui_buffer))) {
         return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
     }
+
+    PRINTF("pk ");
+    for(int i = 0; i < 128; i++) {
+        PRINTF("%02x", N_storage.pk[i]);
+    }
+    PRINTF("...\n");
 
     // Format amount
     char amount[30] = {0};
     memset(amount, 0, sizeof(amount));
-    convert_amount_to_eth(tx->value, tx->value_len, amount, sizeof(amount));
+    convert_amount_to_eth(G_context.tx_info.tx_data.value, G_context.tx_info.tx_data.value_len, amount, sizeof(amount));
     PRINTF("amount %s\n", amount);
     memset(g_amount, 0, sizeof(g_amount));
-    snprintf(g_amount, sizeof(g_amount), "QRL %.*s", sizeof(amount), amount);
+    snprintf(g_amount, sizeof(g_amount), "%.*s QRL", strlen(amount), amount);
 
     // Format to address
     memset(g_to_address, 0, sizeof(g_to_address));
-    if (!format_checksummed_address(tx->to, g_to_address, sizeof(g_to_address))) {
+    if (!format_checksummed_address(G_context.tx_info.tx_data.to, g_to_address, sizeof(g_to_address))) {
         return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
     }
-    PRINTF("to %s\n", g_to_address);
-
+    if(G_context.tx_info.tx_data.to_len > 0) {
+        PRINTF("to %s\n", g_to_address);
+    }
+    
     // Format max_fees
     char max_fees[30] = {0};
     memset(max_fees, 0, sizeof(max_fees));
-    convert_amount_to_eth(tx->gas_fee_cap, tx->gas_fee_cap_len, max_fees, sizeof(max_fees));
+    convert_amount_to_eth(G_context.tx_info.tx_data.gas_fee_cap, G_context.tx_info.tx_data.gas_fee_cap_len, max_fees, sizeof(max_fees));
     PRINTF("max fees %s\n", max_fees);
     memset(g_max_fees, 0, sizeof(g_max_fees));
-    snprintf(g_max_fees, sizeof(g_max_fees), "QRL %.*s", sizeof(max_fees), max_fees);
+    snprintf(g_max_fees, sizeof(g_max_fees), "%.*s QRL", strlen(max_fees), max_fees);
 
     uint8_t num_pairs = 0;
 
     // Setup data to display
     if(N_storage.display_nonce && N_storage.display_tx_hash) {
-        pairs[0].item = "From";
-        pairs[0].value = g_from_address;
-        pairs[1].item = "Amount";
-        pairs[1].value = g_amount;
-        pairs[2].item = "To";
-        pairs[2].value = g_to_address;
-        pairs[3].item = "Nonce";
-        pairs[3].value = g_nonce;
-        pairs[4].item = "Max fees";
-        pairs[4].value = g_max_fees;
-#ifdef SCREEN_SIZE_WALLET
-        pairs[5].item = "Transaction hash";
-#else
-        pairs[5].item = "Tx hash";
-#endif
-        pairs[5].value = g_tx_hash;
-        num_pairs = 6;
+        if(G_context.tx_info.tx_data.data_len > 0) {
+            pairs[0].item = "From";
+            pairs[0].value = g_ui_buffer;
+
+            pairs[1].item = "To";
+            pairs[1].value = g_to_address;
+            if(G_context.tx_info.tx_data.to_len == 0) {
+                memset(g_to_address, 0, sizeof(g_to_address));
+                const char *contract_str = "Contract";
+                snprintf(g_to_address, sizeof(g_to_address), "%s", contract_str);
+                pairs[1].value = g_to_address;
+            } 
+            
+            pairs[2].item = "Nonce";
+            pairs[2].value = g_nonce;
+            pairs[3].item = "Max fees";
+            pairs[3].value = g_max_fees;
+
+    #ifdef SCREEN_SIZE_WALLET
+            pairs[4].item = "Transaction hash";
+    #else
+            pairs[4].item = "Tx hash";
+    #endif
+            pairs[4].value = g_tx_hash;
+
+            
+            num_pairs = 5;
+        } else {
+            pairs[0].item = "From";
+            pairs[0].value = g_ui_buffer;
+            pairs[1].item = "Amount";
+            pairs[1].value = g_amount;
+            pairs[2].item = "To";
+            pairs[2].value = g_to_address;
+            pairs[3].item = "Nonce";
+            pairs[3].value = g_nonce;
+            pairs[4].item = "Max fees";
+            pairs[4].value = g_max_fees;
+    #ifdef SCREEN_SIZE_WALLET
+            pairs[5].item = "Transaction hash";
+    #else
+            pairs[5].item = "Tx hash";
+    #endif
+            pairs[5].value = g_tx_hash;
+            num_pairs = 6;
+        }
     } else if(N_storage.display_nonce) {
-        pairs[0].item = "From";
-        pairs[0].value = g_from_address;
-        pairs[1].item = "Amount";
-        pairs[1].value = g_amount;
-        pairs[2].item = "To";
-        pairs[2].value = g_to_address;
-        pairs[3].item = "Nonce";
-        pairs[3].value = g_nonce;
-        pairs[4].item = "Max fees";
-        pairs[4].value = g_max_fees;
-        num_pairs = 5;
+        if(G_context.tx_info.tx_data.data_len > 0) {
+            pairs[0].item = "From";
+            pairs[0].value = g_ui_buffer;
+
+            pairs[1].item = "To";
+            pairs[1].value = g_to_address;
+            if(G_context.tx_info.tx_data.to_len == 0) {
+                memset(g_to_address, 0, sizeof(g_to_address));
+                const char *contract_str = "Contract";
+                snprintf(g_to_address, sizeof(g_to_address), "%s", contract_str);
+                pairs[1].value = g_to_address;
+            } 
+
+            pairs[2].item = "Nonce";
+            pairs[2].value = g_nonce;
+            pairs[3].item = "Max fees";
+            pairs[3].value = g_max_fees;
+
+            #ifdef SCREEN_SIZE_WALLET
+            pairs[4].item = "Transaction hash";
+    #else
+            pairs[4].item = "Tx hash";
+    #endif
+            pairs[4].value = g_tx_hash;
+
+            num_pairs = 5;
+        } else {
+            pairs[0].item = "From";
+            pairs[0].value = g_ui_buffer;
+            pairs[1].item = "Amount";
+            pairs[1].value = g_amount;
+            pairs[2].item = "To";
+            pairs[2].value = g_to_address;
+            pairs[3].item = "Nonce";
+            pairs[3].value = g_nonce;
+            pairs[4].item = "Max fees";
+            pairs[4].value = g_max_fees;
+            num_pairs = 5;
+        }
     } else if(N_storage.display_tx_hash) {
-        pairs[0].item = "From";
-        pairs[0].value = g_from_address;
-        pairs[1].item = "Amount";
-        pairs[1].value = g_amount;
-        pairs[2].item = "To";
-        pairs[2].value = g_to_address;
-        pairs[3].item = "Max fees";
-        pairs[3].value = g_max_fees;
-#ifdef SCREEN_SIZE_WALLET
-        pairs[4].item = "Transaction hash";
-#else
-        pairs[4].item = "Tx hash";
-#endif
-        pairs[4].value = g_tx_hash;
-        num_pairs = 5;
+        if(G_context.tx_info.tx_data.data_len > 0) {
+            pairs[0].item = "From";
+            pairs[0].value = g_ui_buffer;
+
+            pairs[1].item = "To";
+            pairs[1].value = g_to_address;
+            if(G_context.tx_info.tx_data.to_len == 0) {
+                memset(g_to_address, 0, sizeof(g_to_address));
+                const char *contract_str = "Contract";
+                snprintf(g_to_address, sizeof(g_to_address), "%s", contract_str);
+                pairs[1].value = g_to_address;
+            } 
+
+            pairs[2].item = "Max fees";
+            pairs[2].value = g_max_fees;
+
+    #ifdef SCREEN_SIZE_WALLET
+            pairs[3].item = "Transaction hash";
+    #else
+            pairs[3].item = "Tx hash";
+    #endif
+            pairs[3].value = g_tx_hash;
+
+            num_pairs = 4;
+        } else {
+            pairs[0].item = "From";
+            pairs[0].value = g_ui_buffer;
+            pairs[1].item = "Amount";
+            pairs[1].value = g_amount;
+            pairs[2].item = "To";
+            pairs[2].value = g_to_address;
+            pairs[3].item = "Max fees";
+            pairs[3].value = g_max_fees;
+
+    #ifdef SCREEN_SIZE_WALLET
+            pairs[4].item = "Transaction hash";
+    #else
+            pairs[4].item = "Tx hash";
+    #endif
+            pairs[4].value = g_tx_hash;
+
+            num_pairs = 5;
+        }
     } else {
-        pairs[0].item = "From";
-        pairs[0].value = g_from_address;
-        pairs[1].item = "Amount";
-        pairs[1].value = g_amount;
-        pairs[2].item = "To";
-        pairs[2].value = g_to_address;
-        pairs[3].item = "Max fees";
-        pairs[3].value = g_max_fees;
-        num_pairs = 4;
+        if(G_context.tx_info.tx_data.data_len > 0) { 
+            pairs[0].item = "From";
+            pairs[0].value = g_ui_buffer;
+            pairs[1].item = "To";
+            pairs[1].value = g_to_address;
+            if(G_context.tx_info.tx_data.to_len == 0) {
+                memset(g_to_address, 0, sizeof(g_to_address));
+                const char *contract_str = "Contract";
+                snprintf(g_to_address, sizeof(g_to_address), "%s", contract_str);
+                pairs[1].value = g_to_address;
+            } 
+            pairs[2].item = "Max fees";
+            pairs[2].value = g_max_fees;
+
+            #ifdef SCREEN_SIZE_WALLET
+            pairs[3].item = "Transaction hash";
+    #else
+            pairs[3].item = "Tx hash";
+    #endif
+            pairs[3].value = g_tx_hash;
+
+            num_pairs = 4;
+        } else {
+            pairs[0].item = "From";
+            pairs[0].value = g_ui_buffer;
+            pairs[1].item = "Amount";
+            pairs[1].value = g_amount;
+            pairs[2].item = "To";
+            pairs[2].value = g_to_address;
+            pairs[3].item = "Max fees";
+            pairs[3].value = g_max_fees;
+            num_pairs = 4;
+        }
     }
     
     // Setup list
@@ -355,11 +465,11 @@ int ui_display_transaction_bs_choice(bool is_blind_signed, zond_tx_t *tx) {
 }
 
 // Flow used to display a blind-signed transaction
-int ui_display_blind_signed_transaction(zond_tx_t *tx) {
-    return ui_display_transaction_bs_choice(true, tx);
+int ui_display_blind_signed_transaction() {
+    return ui_display_transaction_bs_choice(true);
 }
 
 // Flow used to display a clear-signed transaction
-int ui_display_transaction(zond_tx_t *tx) {
-    return ui_display_transaction_bs_choice(false, tx);
+int ui_display_transaction() {
+    return ui_display_transaction_bs_choice(false);
 }

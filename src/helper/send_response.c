@@ -25,7 +25,6 @@
 #include "constants.h"
 #include "globals.h"
 #include "sw.h"
-#include "constant.h"
 
 int helper_send_response_address() {
     uint8_t resp[1 + ADDRESS_SIZE] = {0};
@@ -67,6 +66,7 @@ int helper_send_response_sig(uint8_t index) {
     } else if (index == 17) {
         uint8_t temp = 0;
         nvm_write((void *) &N_storage.is_sending_signature, &temp, sizeof(uint8_t));
+        explicit_bzero(&G_context, sizeof(G_context));
         G_context.state = STATE_NONE;
     }
 

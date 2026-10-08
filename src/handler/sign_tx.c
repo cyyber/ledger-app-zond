@@ -20,26 +20,62 @@
 #include <stddef.h>   // size_t
 #include <string.h>   // memset, explicit_bzero
 
-#include "os.h"
+// #include "os.h"
 #include "cx.h"
-#include "buffer.h"
+// #include "buffer.h"
 
 #include "sign_tx.h"
 #include "address.h"
 #include "sw.h"
 #include "globals.h"
-#include "display.h"
-#include "validate.h"
+// #include "display.h"
+// #include "validate.h"
 #include "send_response.h"
-#include "keccak256.h"
 #include "rlp_decode.h"
 #include "common_ui.h"
+#include "lcx_sha3.h"
+
+static bool abi_calldata_parse(const uint8_t *calldata,
+                        size_t         calldata_len,
+                        abi_calldata_t *out) {
+    if (!out) return false;
+    memset(out, 0, sizeof(*out));
+
+    if (!calldata && calldata_len > 0) return false;
+
+    if (calldata_len < ABI_SELECTOR_SIZE) return false;
+
+    memcpy(out->selector, calldata, ABI_SELECTOR_SIZE);
+    out->has_selector = true;
+
+    size_t data_len   = calldata_len - ABI_SELECTOR_SIZE;
+    size_t slot_count = data_len / ABI_SLOT_SIZE;
+    size_t remainder  = data_len % ABI_SLOT_SIZE;
+
+    if(remainder > 0) return false;
+
+    size_t total_slots = slot_count;
+    if (total_slots > ABI_MAX_PARAMS) total_slots = ABI_MAX_PARAMS;
+
+    out->param_count = (uint8_t) total_slots;
+
+    for (size_t i = 0; i < total_slots; i++) {
+        const uint8_t *slot_ptr = calldata + 4 + (i * ABI_SLOT_SIZE);
+        memcpy(out->params[i], slot_ptr, 64);
+    }
+    return true;
+}
+
+
 
 int handler_sign_tx(buffer_t *cdata, uint8_t p1, uint8_t p2) {
     if (p1 == 0) {
         explicit_bzero(&G_context, sizeof(G_context));
         G_context.req_type = CONFIRM_TRANSACTION;
         G_context.state = STATE_NONE;
+
+        uint8_t zero_buffer[MLDSA87_SIGBYTES] = {0};
+        nvm_write((void *)&N_storage.sig[0], zero_buffer, MLDSA87_SIGBYTES);
 
         if (!buffer_read_u8(cdata, &G_context.bip32_path_len) ||
             !buffer_read_bip32_path(cdata,
@@ -105,34 +141,82 @@ int handler_sign_tx(buffer_t *cdata, uint8_t p1, uint8_t p2) {
         G_context.state = STATE_PARSED;
 
         // Hash message
-        keccak256_ctx ctx;
-        keccak256_init(&ctx);
-        keccak256_absorb(&ctx, G_context.tx_info.raw_tx, G_context.tx_info.raw_tx_len);
-        keccak256_finalize(&ctx);
-        keccak256_squeeze(&ctx, G_context.tx_info.m_hash);
-        keccak256_clear(&ctx);
-        PRINTF("MESSAGE HASH: ");
-        for (int i = 0; i < 32; i++) {
-            PRINTF("%02x", G_context.tx_info.m_hash[i]);
+        // keccak256_ctx ctx;
+        // keccak256_init(&ctx);
+        // keccak256_absorb(&ctx, G_context.tx_info.raw_tx, G_context.tx_info.raw_tx_len);
+        // keccak256_finalize(&ctx);
+        // keccak256_squeeze(&ctx, G_context.tx_info.m_hash);
+        // keccak256_clear(&ctx);
+        cx_err_t error = cx_keccak_256_hash(G_context.tx_info.raw_tx,
+                                          G_context.tx_info.raw_tx_len,
+                                          G_context.tx_info.m_hash);
+        if(error != CX_OK) {
+            return io_send_sw(SW_SIGNATURE_FAIL);
         }
-        PRINTF("\n");
+        // PRINTF("MESSAGE HASH: ");
+        // for (int i = 0; i < 32; i++) {
+        //     PRINTF("%02x", G_context.tx_info.m_hash[i]);
+        // }
+        // PRINTF("\n");
 
-        zond_tx_t tx;
-        explicit_bzero(&tx, sizeof(tx));
-        int err = decode_ledger_tx(G_context.tx_info.raw_tx, G_context.tx_info.raw_tx_len, &tx);
+        // if (G_context.req_type == CONFIRM_TRANSACTION) {
+        //     PRINTF("TRANSACTION\n");
+        // }
+
+        // PRINTF("%d\n", sizeof(G_context.tx_info.raw_tx));
+        // PRINTF("%d\n", G_context.tx_info.raw_tx_len);
+        int err = decode_ledger_tx(G_context.tx_info.raw_tx, G_context.tx_info.raw_tx_len, &G_context.tx_info.tx_data);
+
+        PRINTF("max data size outside %d\n", MAX_DATA_SIZE);
+        PRINTF("max transaction len outside %d\n", MAX_TRANSACTION_LEN);
+
+        // PRINTF("%d\n", G_context.tx_info.tx_data.data_len);
+
         if (err != 0) {
             PRINTF("Failed to decode\n");
             return io_send_sw(SW_TX_PARSING_FAIL);
         }
 
-        if(tx.data_len !=0 && !N_storage.enable_blind_signing) {
+        // PRINTF("%d\n", G_context.tx_info.tx_data.data_len);
+        // #ifdef TARGET_NANOX
+        //     PRINTF("NANO X %d\n", G_context.tx_info.tx_data.data_len);
+        // #endif
+
+        if((G_context.tx_info.tx_data.data_len !=0) && !N_storage.enable_blind_signing) {
             ui_error_blind_signing();
             return io_send_sw(SW_SIGNATURE_FAIL);
-        } else if(tx.data_len !=0 && N_storage.enable_blind_signing)  {
-            return ui_display_blind_signed_transaction(&tx);
+        } else if(G_context.tx_info.tx_data.to_len > 0 && G_context.tx_info.tx_data.data_len > 0 && N_storage.enable_debug_smart_contract && N_storage.enable_blind_signing) {
+            PRINTF("PARSE RLP CALLDATA\n");
+            if (abi_calldata_parse(G_context.tx_info.tx_data.data, G_context.tx_info.tx_data.data_len, &G_context.tx_info.calldata)) {
+                PRINTF("SUCCESS PARSING\n");    
+                if(G_context.tx_info.calldata.has_selector) {
+                    PRINTF("SELECTOR: ");
+                    for(int i = 0; i < 4; i++) {
+                        PRINTF("%02x", G_context.tx_info.calldata.selector[i]);
+                    }   
+                }
+                PRINTF("\n");
+                PRINTF("PARAM COUNT: %d\n", G_context.tx_info.calldata.param_count);
+                if(G_context.tx_info.calldata.param_count) {
+                    for(int i = 0; i < G_context.tx_info.calldata.param_count; i++) {
+                        PRINTF("PARAM %d: ", i+1);
+                        for(int j = 0; j < 64; j++) {
+                            PRINTF("%02x", G_context.tx_info.calldata.params[i][j]);
+                        }
+                        PRINTF("\n");
+                    }
+                }
+                         
+                ui_contract_call_init(G_context.tx_info.calldata.param_count);
+                return ui_confirm_selector();
+            } else {
+                PRINTF("ERROR PARSING\n");
+            }
+        } else if((G_context.tx_info.tx_data.data_len !=0) && N_storage.enable_blind_signing)  {
+            return ui_display_blind_signed_transaction();
         }
 
-        return ui_display_transaction(&tx);
+        return ui_display_transaction();
         // return ui_display_blind_signed_transaction();
     } else if (p1 == 2 && p2 > 0 && p2 < 18) {
         if (G_context.req_type != CONFIRM_TRANSACTION) {
